@@ -18,11 +18,12 @@ services:
       - |
         WP_DIR=/app/wordpress
         if [ ! -f "$WP_DIR/wp-load.php" ]; then
-          echo "Downloading WordPress 7.0 RC4..."
-          curl -sSfo /tmp/wordpress.zip https://wordpress.org/wordpress-7.0-RC4.zip
-          unzip -qo /tmp/wordpress.zip -d /app/
-          rm /tmp/wordpress.zip
-          echo "WordPress 7.0 RC4 extracted."
+          echo "Downloading WordPress 7.0 RC4 (no default themes/plugins)..."
+          mkdir -p "$WP_DIR"
+          # --skip-content omits the bundled wp-content/plugins (Akismet, Hello Dolly)
+          # and wp-content/themes (Twenty*). Keeps the install minimal and reproducible.
+          wp core download --version=7.0-RC4 --path="$WP_DIR" --skip-content --allow-root
+          echo "WordPress 7.0 RC4 extracted (no default themes/plugins)."
         fi
     build:
       - |
