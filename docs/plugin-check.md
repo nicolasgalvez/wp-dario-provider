@@ -18,32 +18,17 @@ To reproduce the exact CI invocation locally:
 ```bash
 lando wp plugin check wp-dario-provider \
   --exclude-checks=plugin_updater \
-  --ignore-codes=WordPress.WP.AlternativeFunctions.unlink_unlink,WordPress.WP.AlternativeFunctions.file_system_operations_chmod,WordPress.WP.AlternativeFunctions.file_system_operations_mkdir,WordPress.WP.AlternativeFunctions.file_system_operations_fclose,WordPress.WP.AlternativeFunctions.rename_rename,WordPress.WP.AlternativeFunctions.file_system_operations_is_writable,WordPress.WP.AlternativeFunctions.file_system_operations_fopen,WordPress.WP.AlternativeFunctions.file_system_operations_fwrite,WordPress.WP.AlternativeFunctions.file_system_operations_fsockopen \
   --ignore-warnings \
   --format=json
 ```
 
 ## Deferred exceptions (tracked in Jira)
 
-The plugin currently fails PCP on two categories that are deferred to follow-up tickets. Each is listed here with its rationale and the ticket where the work happens.
-
-### File operations should use `WP_Filesystem`
-
-PCP rule family: `WordPress.WP.AlternativeFunctions.file_system_operations_*`, `unlink_unlink`, `rename_rename`.
-
-| Where | What it does | Why direct PHP |
-|---|---|---|
-| `src/Sidecar/DarioBackendConfig.php` | Writes `~/.dario/backends/<name>.json` (mode 0600) | Atomic temp+rename pattern matches Dario's own `saveBackend()` for byte compatibility |
-| `src/Sidecar/DarioClaudeAuth.php` | Writes `credentials.json`, manages FIFOs + log files for the manual OAuth flow | Named pipes have no `WP_Filesystem` equivalent; OAuth log + fifo are local-only |
-| `src/Sidecar/DarioSidecar.php` | `fsockopen` port liveness check, `is_writable` for log dir | No `WP_Filesystem` equivalent for socket connect |
-
-**Tracked in:** [WPD-4 — Refactor filesystem ops to WP_Filesystem (PCP compliance)](https://procyoncreative.atlassian.net/browse/WPD-4).
-
-After WPD-4 lands, only the `fsockopen` (port liveness) and the FIFO ops will remain as permanent exceptions, with phpcs:ignore comments and a note in this file.
+Only one category of PCP error is currently deferred.
 
 ### Plugin updater detected
 
-PCP rule: `plugin_updater_detected`.
+PCP rule: `plugin_updater_detected` (3 errors).
 
 The plugin uses [`yahnis-elsts/plugin-update-checker`](https://github.com/YahnisElsts/plugin-update-checker) plus a custom `Update URI` header in the plugin file to deliver updates from GitHub releases. Both are explicitly disallowed in plugins hosted on wordpress.org (the wp.org repo IS the update mechanism for hosted plugins).
 
@@ -59,11 +44,24 @@ PCP warning: `trademarked_term`. The slug `wp-dario-provider` contains the restr
 
 Tied to the same wp.org distribution decision as the updater above. **Tracked in:** [WPD-5](https://procyoncreative.atlassian.net/browse/WPD-5).
 
-## Permanent exceptions (after WPD-4 lands)
+## Permanent exceptions (already applied as `phpcs:ignore`)
 
-These will stay even after the WP_Filesystem refactor:
+These three call sites have no `WP_Filesystem` equivalent and are marked with inline `// phpcs:ignore` comments. They are accepted permanent exceptions and do **not** appear in PCP output.
 
-- `fsockopen` + paired `fclose` in `DarioSidecar::isPortOpen()` — port liveness check, no equivalent in `WP_Filesystem`.
-- `posix_mkfifo` and read-side fifo `fopen`/`fclose` in `DarioClaudeAuth::startManualLogin()` — required for the cross-request FIFO orchestration of `dario login --manual`.
+| Where | What it does | Why no WP_Filesystem |
+|---|---|---|
+| `src/Sidecar/DarioSidecar.php` `isPortOpen()` | TCP socket connect to check if the sidecar's port is listening | Not file I/O. `WP_Filesystem` is for files, not sockets |
+| `src/Sidecar/DarioClaudeAuth.php` `startManualLogin()` | `posix_mkfifo()` to create the named pipe | FIFOs are not files; `WP_Filesystem` has no equivalent |
+| `src/Sidecar/DarioClaudeAuth.php` `submitManualCode()` | `fopen` / `fwrite` / `fclose` to push the OAuth code through the FIFO | `WP_Filesystem::put_contents` would truncate-and-write, which doesn't work on a non-seekable FIFO target |
 
-When WPD-4 lands, mark these with `// phpcs:ignore WordPress.WP.AlternativeFunctions.* -- ...reason...` and remove the corresponding entries from the `--ignore-codes` list above.
+If any new `phpcs:ignore` comments get added, document the rationale here so reviewers don't have to guess.
+
+## Implementation notes
+
+The `Dario\Sidecar\Concerns\WithFilesystem` trait lazily instantiates a `WP_Filesystem_Direct` (not the global `$wp_filesystem` singleton) for plugin code that needs file I/O. We bypass `WP_Filesystem()` auto-detection because:
+
+- All our writes target `~/.dario/`, owned by the WP runtime user, so the `direct` method always works.
+- `WP_Filesystem()` can prompt for FTP credentials in environments where it can't write directly. We don't want a UI prompt for our internal file ops.
+- PCP treats both forms as equivalent for the `WordPress.WP.AlternativeFunctions.file_system_operations_*` rules.
+
+Tests that exercise the file-writing paths bootstrap a minimal WP environment via `tests/bootstrap.php` (defines `ABSPATH`, stubs `WP_Error`, and a handful of WP helper functions like `untrailingslashit`, `wp_delete_file`, `mbstring_binary_safe_encoding`). This lets `npm test` run without spinning up a full WP install.
