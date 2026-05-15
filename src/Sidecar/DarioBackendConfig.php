@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace Dario\Sidecar;
 
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 /**
  * Writes Dario OpenAI-compatible backend credentials to disk in the format
  * Dario's own `saveBackend()` produces (`~/.dario/backends/<name>.json`).

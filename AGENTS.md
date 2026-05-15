@@ -50,11 +50,12 @@ lando ssh -s appserver -c 'cd /app && npm test'   # same tests, in the container
 lando deploy-plugin
 ```
 
-### Plugin Check (PCP) — wp.org submission readiness (after WPD-1 lands)
+### Plugin Check (PCP) — wp.org submission readiness
 ```bash
 lando wp plugin install plugin-check --activate
 lando wp plugin check wp-dario-provider
 ```
+CI runs this on every PR with the deferred-exception list applied. See [docs/plugin-check.md](docs/plugin-check.md) for the deferred items and which Jira tickets track them.
 
 ## Development Rules
 

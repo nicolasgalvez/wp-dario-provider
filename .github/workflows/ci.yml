@@ -108,6 +108,35 @@ jobs:
             exit 1
           fi
 
+      - name: Plugin Check (excluding deferred exceptions)
+        run: |
+          lando wp plugin install plugin-check --activate
+          # Excluded code list mirrors docs/plugin-check.md "Deferred exceptions" section.
+          # If a new error appears outside this list, the step fails and the new
+          # error must be either fixed or explicitly added here + documented.
+          IGNORE_CODES="WordPress.WP.AlternativeFunctions.unlink_unlink"
+          IGNORE_CODES="$IGNORE_CODES,WordPress.WP.AlternativeFunctions.file_system_operations_chmod"
+          IGNORE_CODES="$IGNORE_CODES,WordPress.WP.AlternativeFunctions.file_system_operations_mkdir"
+          IGNORE_CODES="$IGNORE_CODES,WordPress.WP.AlternativeFunctions.file_system_operations_fclose"
+          IGNORE_CODES="$IGNORE_CODES,WordPress.WP.AlternativeFunctions.rename_rename"
+          IGNORE_CODES="$IGNORE_CODES,WordPress.WP.AlternativeFunctions.file_system_operations_is_writable"
+          IGNORE_CODES="$IGNORE_CODES,WordPress.WP.AlternativeFunctions.file_system_operations_fopen"
+          IGNORE_CODES="$IGNORE_CODES,WordPress.WP.AlternativeFunctions.file_system_operations_fwrite"
+          IGNORE_CODES="$IGNORE_CODES,WordPress.WP.AlternativeFunctions.file_system_operations_fsockopen"
+          OUTPUT=$(lando wp plugin check wp-dario-provider \
+            --exclude-checks=plugin_updater \
+            --ignore-codes="$IGNORE_CODES" \
+            --ignore-warnings \
+            --format=json 2>&1)
+          if [ -n "$OUTPUT" ]; then
+            echo "::error::Plugin Check found new errors outside the documented exception list"
+            echo "$OUTPUT"
+            echo ""
+            echo "If these are intentional, add the codes to docs/plugin-check.md and to the IGNORE_CODES list in ci.yml."
+            exit 1
+          fi
+          echo "✓ Plugin Check clean (excluding documented deferred exceptions)"
+
       - name: Show Lando logs on failure
         if: failure()
         run: |

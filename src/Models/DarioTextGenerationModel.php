@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace Dario\Models;
 
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 use WordPress\AiClient\Messages\DTO\Message;
 use WordPress\AiClient\Messages\DTO\MessagePart;
 use WordPress\AiClient\Messages\Enums\MessageRoleEnum;

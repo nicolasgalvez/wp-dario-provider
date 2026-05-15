@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace Dario\Admin;
 
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 /**
  * Persisted plugin settings for the Dario AI Connector.
  *

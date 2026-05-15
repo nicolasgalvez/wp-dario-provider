@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace Dario\Admin;
 
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 use Dario\Sidecar\DarioBackendConfig;
 use Dario\Sidecar\DarioClaudeAuth;
 use Dario\Sidecar\DarioSidecar;
@@ -268,19 +272,22 @@ class DarioSettingsPage {
 		$map      = DarioSettings::overrideMap();
 		$constant = $map[ $key ] ?? '';
 		echo '<p class="description"><em>' . esc_html(
+			/* translators: %s: PHP constant or environment variable name (e.g. DARIO_PROXY_HOST). */
 			sprintf( __( 'Overridden by %s constant or environment variable.', 'wp-dario-provider' ), $constant )
 		) . '</em></p>';
 	}
 
 	private function formatClaudeStatus( array $claude ): string {
 		if ( ! empty( $claude['error'] ) ) {
+			/* translators: %s: error message returned from the Dario auth status check. */
 			return sprintf( __( 'Status check failed: %s', 'wp-dario-provider' ), (string) $claude['error'] );
 		}
 
 		if ( ! empty( $claude['authenticated'] ) ) {
 			$status = (string) ( $claude['status'] ?? 'healthy' );
 			$expiry = ! empty( $claude['expiresIn'] ) ? sprintf( ' (%s)', (string) $claude['expiresIn'] ) : '';
-			return sprintf( __( 'Authenticated — %s%s', 'wp-dario-provider' ), $status, $expiry );
+			/* translators: 1: dario auth status word (healthy/expiring/etc.); 2: optional expiry text in parentheses. */
+			return sprintf( __( 'Authenticated — %1$s%2$s', 'wp-dario-provider' ), $status, $expiry );
 		}
 
 		if ( ! empty( $claude['hasCredentials'] ) ) {
@@ -292,6 +299,7 @@ class DarioSettingsPage {
 
 	public function handleSaveSettings(): void {
 		$this->verifyRequest();
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- nonce verified in verifyRequest().
 		$sanitized = DarioSettings::sanitize( wp_unslash( $_POST ) );
 		DarioSettings::update( $sanitized );
 		DarioSidecar::syncConnectorApiKey();
@@ -304,7 +312,9 @@ class DarioSettingsPage {
 				(string) $sanitized['openai_base_url']
 			);
 			$detail = $result['ok']
+				/* translators: %s: full filesystem path of the written backend JSON file. */
 				? sprintf( __( 'Backend file written to %s.', 'wp-dario-provider' ), (string) ( $result['path'] ?? '' ) )
+				/* translators: %s: error message describing why the backend file could not be written. */
 				: sprintf( __( 'Backend file not written: %s.', 'wp-dario-provider' ), (string) ( $result['error'] ?? 'unknown error' ) );
 		} elseif ( ! $sanitized['openai_backend_enabled'] ) {
 			DarioBackendConfig::remove( (string) $sanitized['openai_backend_name'] );
@@ -377,8 +387,10 @@ class DarioSettingsPage {
 
 	public function handleOAuthSubmit(): void {
 		$this->verifyRequest();
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- nonce verified in verifyRequest().
 		$session_id = isset( $_POST['session_id'] ) ? sanitize_text_field( wp_unslash( (string) $_POST['session_id'] ) ) : '';
-		$pasted     = isset( $_POST['paste'] ) ? trim( wp_unslash( (string) $_POST['paste'] ) ) : '';
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- nonce verified in verifyRequest().
+		$pasted = isset( $_POST['paste'] ) ? trim( sanitize_textarea_field( wp_unslash( (string) $_POST['paste'] ) ) ) : '';
 
 		$result = DarioClaudeAuth::submitManualCode( $session_id, $pasted );
 		if ( $result['ok'] ) {
@@ -390,7 +402,8 @@ class DarioSettingsPage {
 
 	public function handleOAuthPasteCreds(): void {
 		$this->verifyRequest();
-		$pasted = isset( $_POST['credentials'] ) ? wp_unslash( (string) $_POST['credentials'] ) : '';
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- nonce verified in verifyRequest().
+		$pasted = isset( $_POST['credentials'] ) ? sanitize_textarea_field( wp_unslash( (string) $_POST['credentials'] ) ) : '';
 		$result = DarioClaudeAuth::importCredentialsJson( $pasted );
 		$this->setFlash(
 			(string) $result['message'],
@@ -402,6 +415,7 @@ class DarioSettingsPage {
 
 	public function handleOAuthCancel(): void {
 		$this->verifyRequest();
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- nonce verified in verifyRequest().
 		$session_id = isset( $_POST['session_id'] ) ? sanitize_text_field( wp_unslash( (string) $_POST['session_id'] ) ) : '';
 		if ( $session_id !== '' ) {
 			DarioClaudeAuth::cancelSession( $session_id );
@@ -416,7 +430,9 @@ class DarioSettingsPage {
 			wp_die( esc_html__( 'You do not have permission to perform this action.', 'wp-dario-provider' ) );
 		}
 
-		$nonce = isset( $_POST[ self::NONCE_FIELD ] ) ? (string) $_POST[ self::NONCE_FIELD ] : '';
+		$nonce = isset( $_POST[ self::NONCE_FIELD ] )
+			? sanitize_text_field( wp_unslash( (string) $_POST[ self::NONCE_FIELD ] ) )
+			: '';
 		if ( ! wp_verify_nonce( $nonce, self::NONCE_ACTION ) ) {
 			wp_die( esc_html__( 'Security check failed.', 'wp-dario-provider' ) );
 		}

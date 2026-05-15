@@ -1,6 +1,6 @@
 === Dario AI Connector ===
 Contributors:      nicolasgalvez
-Tags:              ai, dario, llm, connector, openai, claude
+Tags:              ai, llm, connector, openai, claude
 Tested up to:      7.0
 Stable tag:        0.1.5
 License:           GPL-2.0-or-later
