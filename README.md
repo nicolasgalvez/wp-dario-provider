@@ -115,18 +115,27 @@ $text = wp_ai_client_prompt( 'Write a haiku about WordPress.' )
 
 ```bash
 composer install
-npm install
+npm ci
 ```
 
-### Testing
+### Tests + checks (same scripts run locally and in CI)
 
 ```bash
-npm test
+npm run lint         # php -l on src/+tests/, node --check on sidecar/*.mjs
+npm test             # PHP unit tests (host-side, fast)
+npm run check:pcp    # Plugin Check via Lando — requires `lando start` first
+npm run check        # everything (lint + test + check:pcp)
 ```
 
-### Linting
+CI runs the exact same scripts. PHP linting also runs via husky + lint-staged on commit.
 
-PHP linting runs via husky + lint-staged on commit.
+### Local dev environment
+
+```bash
+lando start          # boots WordPress + auto-installs plugin, theme, and test companions
+```
+
+`lando start` is idempotent — it sets up WordPress 7.0 RC4, the `twentytwentyfive` theme, and activates `procyon-dario-provider`, the `ai` consumer plugin (for end-to-end testing), and `plugin-check` (for PCP runs). No follow-up commands needed.
 
 ### Conventional Commits
 
@@ -140,9 +149,11 @@ chore: bump dependencies
 
 ## Releases
 
-1. Bump version in `readme.txt`, `plugin.json`, and `procyon-dario-provider.php`
-2. Tag and push: `git tag v0.1.x -m "message" && git push origin v0.1.x`
-3. GitHub Actions builds the zip and attaches it to the release
+1. Bump version in `readme.txt`, `plugin.json`, `package.json`, `package-lock.json`, and `procyon-dario-provider.php`
+2. Tag and create the GitHub release: `gh release create v0.2.x --generate-notes`
+3. The release workflow builds the zip and attaches it as a release asset
+
+Releases live at https://github.com/procyon-creative/wp-dario-provider/releases
 
 ## License
 
