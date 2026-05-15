@@ -95,7 +95,7 @@ Three places must have matching version bumps:
 
 Then tag + push: `git tag v0.1.x -m "message" && git push origin v0.1.x`
 
-The GitHub Actions workflow builds the zip and attaches it to the release automatically.
+The GitHub Actions workflow builds the zip and attaches it to the release automatically. Releases live at https://github.com/procyon-creative/wp-dario-provider/releases.
 
 ## Issue Tracking
 
