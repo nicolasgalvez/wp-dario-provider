@@ -1,11 +1,11 @@
 {
   "name": "wp-dario-provider",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "private": true,
   "description": "AI Provider for Dario local LLM router for the WordPress AI Client.",
   "license": "GPL-2.0-or-later",
   "scripts": {
-    "test": "php -d zend.assertions=1 -d assert.exception=1 tests/test-model-metadata-directory.php",
+    "test": "php -d zend.assertions=1 -d assert.exception=1 tests/test-model-metadata-directory.php && php -d zend.assertions=1 -d assert.exception=1 tests/test-dario-sidecar.php",
     "prepare": "husky"
   },
   "devDependencies": {
@@ -18,5 +18,8 @@
     "*.php": [
       "php -l"
     ]
+  },
+  "dependencies": {
+    "@askalf/dario": "^3.38.3"
   }
 }

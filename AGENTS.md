@@ -23,7 +23,7 @@ vendor/                            Composer deps (plugin-update-checker)
 - **PHP**: 7.4+ compatible, strict types declared
 - **Namespace**: `Dario\` (PSR-4, loaded via custom autoloader — not Composer's)
 - **WordPress AI Client interfaces**: `AbstractApiProvider`, `AbstractApiBasedModel`, `ModelMetadataDirectoryInterface`
-- **No build step**: pure PHP plugin, no JS/CSS compilation
+- **No frontend build step**: PHP plugin with a Node sidecar script for Dario; no JS/CSS compilation
 
 ## Developer Commands
 
@@ -74,7 +74,7 @@ The GitHub Actions workflow builds the zip and attaches it to the release automa
 
 ## Things an Agent Might Get Wrong
 
-- **This is a pure PHP plugin.** No node build step, no `wp-scripts build`, no blocks.
+- **This is not a block/frontend plugin.** It has a Node sidecar runtime for Dario, but no `wp-scripts build` and no blocks.
 - **The AI Client is bundled in WordPress 7.0+.** Do not install `wordpress/php-ai-client` as a Composer dependency — it will conflict with Core's bundled version.
 - **Dario base URL is configurable.** Check `DARIO_BASE_URL` constant or env var before assuming `localhost:3456`.
 - **Model list is hardcoded.** Dario doesn't expose a `/v1/models` endpoint, so models are curated in `DarioModelMetadataDirectory::DEFAULT_MODELS`.

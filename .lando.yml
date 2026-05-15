@@ -10,7 +10,11 @@ services:
   appserver:
     type: php:8.3
     build_as_root:
-      - apt-get update -qq && apt-get install -y -qq unzip curl default-mysql-client > /dev/null 2>&1
+      - apt-get update -qq && apt-get install -y -qq unzip curl ca-certificates gnupg default-mysql-client > /dev/null 2>&1
+      - curl -fsSL https://deb.nodesource.com/setup_22.x | bash - >/dev/null 2>&1
+      - apt-get install -y -qq nodejs > /dev/null 2>&1
+      - curl -fsSL https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar -o /usr/local/bin/wp
+      - chmod +x /usr/local/bin/wp
       - |
         WP_DIR=/app/wordpress
         if [ ! -f "$WP_DIR/wp-load.php" ]; then
@@ -25,10 +29,14 @@ services:
         PLUGIN_DIR=/app/wordpress/wp-content/plugins/wp-dario-provider
         mkdir -p "$PLUGIN_DIR"
         cp -r /app/src/ "$PLUGIN_DIR/src/" 2>/dev/null || true
+        cp -r /app/sidecar/ "$PLUGIN_DIR/sidecar/" 2>/dev/null || true
         cp -r /app/assets/ "$PLUGIN_DIR/assets/" 2>/dev/null || true
         cp -r /app/vendor/ "$PLUGIN_DIR/vendor/" 2>/dev/null || true
+        cp -r /app/node_modules/ "$PLUGIN_DIR/node_modules/" 2>/dev/null || true
         cp /app/wp-dario-provider.php "$PLUGIN_DIR/" 2>/dev/null || true
         cp /app/plugin.json "$PLUGIN_DIR/" 2>/dev/null || true
+        cp /app/package.json "$PLUGIN_DIR/" 2>/dev/null || true
+        cp /app/package-lock.json "$PLUGIN_DIR/" 2>/dev/null || true
         cp /app/readme.txt "$PLUGIN_DIR/" 2>/dev/null || true
     overrides:
       environment:
@@ -36,7 +44,7 @@ services:
         WP_DB_NAME: wordpress
         WP_DB_USER: wordpress
         WP_DB_PASSWORD: wordpress
-        DARIO_BASE_URL: http://host.docker.internal:3456/v1
+        DARIO_BASE_URL: http://127.0.0.1:3456/v1
 
   database:
     type: mariadb:10.6
@@ -76,9 +84,17 @@ tooling:
         rm -rf "$PLUGIN_DIR"
         mkdir -p "$PLUGIN_DIR"
         cp -r /app/src/ "$PLUGIN_DIR/src/"
+        cp -r /app/sidecar/ "$PLUGIN_DIR/sidecar/"
         cp -r /app/assets/ "$PLUGIN_DIR/assets/"
         cp -r /app/vendor/ "$PLUGIN_DIR/vendor/"
+        cp -r /app/node_modules/ "$PLUGIN_DIR/node_modules/"
         cp /app/wp-dario-provider.php "$PLUGIN_DIR/"
         cp /app/plugin.json "$PLUGIN_DIR/"
+        cp /app/package.json "$PLUGIN_DIR/"
+        cp /app/package-lock.json "$PLUGIN_DIR/"
         cp /app/readme.txt "$PLUGIN_DIR/"
         echo "Plugin deployed."
+  dario:
+    service: appserver
+    description: Run the bundled Dario CLI from the installed plugin
+    cmd: /app/wordpress/wp-content/plugins/wp-dario-provider/node_modules/.bin/dario

@@ -6,7 +6,7 @@
  * Description:       Connects WordPress to AI models via the Dario local LLM router using the WordPress 7.0 Connectors API.
  * Requires at least: 7.0
  * Requires PHP:      7.4
- * Version:           0.1.3
+ * Version:           0.1.4
  * Author:            Nicolas Galvez
  * Author URI:        https://github.com/nicolasgalvez
  * License:           GPL-2.0-or-later
@@ -22,6 +22,7 @@ declare(strict_types=1);
 namespace Dario;
 
 use YahnisElsts\PluginUpdateChecker\v5\PucFactory;
+use Dario\Sidecar\DarioSidecar;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	return;
@@ -29,6 +30,14 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 require_once __DIR__ . '/vendor/autoload.php';
 require_once __DIR__ . '/src/autoload.php';
+
+register_activation_hook( __FILE__, static function (): void {
+	DarioSidecar::activate( __FILE__ );
+} );
+
+register_deactivation_hook( __FILE__, static function (): void {
+	DarioSidecar::deactivate();
+} );
 
 $my_update_checker = PucFactory::buildUpdateChecker(
 	'https://github.com/nicolasgalvez/wp-dario-provider/',

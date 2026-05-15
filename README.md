@@ -6,7 +6,8 @@ Connects WordPress to AI models via the [Dario](https://github.com/askalf/dario)
 
 - WordPress 7.0+
 - PHP 7.4+
-- [Dario](https://github.com/askalf/dario) running locally or on an accessible host
+- Node.js 18+ if you want the plugin to manage the bundled Dario sidecar
+- Or [Dario](https://github.com/askalf/dario) running externally on an accessible host
 
 ## Installation
 
@@ -14,6 +15,12 @@ Connects WordPress to AI models via the [Dario](https://github.com/askalf/dario)
 2. Upload to `/wp-content/plugins/wp-dario-provider/` or install via the WordPress plugins screen
 3. Activate the plugin
 4. Configure your Dario API key in **Settings > Connectors**
+
+On activation, the plugin attempts to start a bundled Dario Node sidecar if Node.js is available. Disable this with:
+
+```php
+define( 'DARIO_MANAGE_SIDECAR', false );
+```
 
 ## Configuration
 
@@ -31,6 +38,35 @@ Or via environment variable:
 ```
 DARIO_BASE_URL=http://192.168.1.100:3456/v1
 ```
+
+### Sidecar
+
+The bundled sidecar starts `@askalf/dario` on `127.0.0.1:3456` by default. Override the host/port with:
+
+```php
+define( 'DARIO_PROXY_HOST', '127.0.0.1' );
+define( 'DARIO_PROXY_PORT', 3456 );
+```
+
+Or via environment variables:
+
+```
+DARIO_PROXY_HOST=127.0.0.1
+DARIO_PROXY_PORT=3456
+```
+
+If your Node binary is not named `node`, set `DARIO_NODE_BINARY`.
+
+Dario must be authenticated for the OS user that runs WordPress/PHP. In Lando:
+
+```bash
+lando deploy-plugin
+lando dario login
+lando wp plugin deactivate wp-dario-provider
+lando wp plugin activate wp-dario-provider
+```
+
+If Dario is not authenticated, activation logs the failure to `wp-content/dario-provider/dario-sidecar.log` and leaves the plugin active.
 
 ### API Key
 
@@ -79,6 +115,7 @@ $text = wp_ai_client_prompt( 'Write a haiku about WordPress.' )
 
 ```bash
 composer install
+npm install
 ```
 
 ### Testing

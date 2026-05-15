@@ -2,7 +2,7 @@
 Contributors:      nicolasgalvez
 Tags:              ai, dario, llm, connector, openai, claude
 Tested up to:      7.0
-Stable tag:        0.1.3
+Stable tag:        0.1.4
 License:           GPL-2.0-or-later
 License URI:       https://spdx.org/licenses/GPL-2.0-or-later.html
 
@@ -19,12 +19,15 @@ This plugin registers [Dario](https://github.com/askalf/dario) as an AI provider
 * Supports text generation through any backend Dario routes to
 * Configurable base URL (defaults to `http://localhost:3456/v1`)
 * Auto-updates from GitHub releases
+* Optionally starts a bundled Dario Node sidecar on plugin activation
 
 **Configuration:**
 
-1. Install and run [Dario](https://github.com/askalf/dario) locally
+1. Ensure Node.js 18+ is available if the plugin should manage Dario, or install and run [Dario](https://github.com/askalf/dario) externally
 2. Set your API key in Settings > Connectors
 3. Optionally define `DARIO_BASE_URL` in wp-config.php if Dario runs on a non-default host/port
+4. Define `DARIO_MANAGE_SIDECAR` as `false` to disable sidecar startup
+5. Authenticate Dario as the same OS user that runs WordPress/PHP; sidecar failures are logged to `wp-content/dario-provider/dario-sidecar.log`
 
 **Requires WordPress 7.0+** with the Connectors API and AI Client.
 
@@ -35,6 +38,9 @@ This plugin registers [Dario](https://github.com/askalf/dario) as an AI provider
 1. Configure your Dario API key in Settings > Connectors.
 
 == Changelog ==
+
+= 0.1.4 =
+* Start a bundled Dario Node sidecar on plugin activation when Node.js is available.
 
 = 0.1.3 =
 * Include Composer vendor files in the GitHub release zip.

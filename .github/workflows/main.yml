@@ -28,17 +28,25 @@ jobs:
       - name: Install Composer dependencies
         run: composer install --no-dev --optimize-autoloader
 
+      - name: Install Node dependencies
+        run: npm ci --omit=dev --ignore-scripts
+
       - name: Create plugin zip
         run: |
           mkdir -p /tmp/$PLUGIN_NAME
           cp -r src/ /tmp/$PLUGIN_NAME/src/
+          cp -r sidecar/ /tmp/$PLUGIN_NAME/sidecar/
           cp -r assets/ /tmp/$PLUGIN_NAME/assets/
           cp -r vendor/ /tmp/$PLUGIN_NAME/vendor/
+          cp -r node_modules/ /tmp/$PLUGIN_NAME/node_modules/
           cp wp-dario-provider.php /tmp/$PLUGIN_NAME/
           cp plugin.json /tmp/$PLUGIN_NAME/
+          cp package.json /tmp/$PLUGIN_NAME/
+          cp package-lock.json /tmp/$PLUGIN_NAME/
           cp readme.txt /tmp/$PLUGIN_NAME/
           cp LICENSE /tmp/$PLUGIN_NAME/ 2>/dev/null || true
           test -f /tmp/$PLUGIN_NAME/vendor/autoload.php
+          test -f /tmp/$PLUGIN_NAME/node_modules/@askalf/dario/dist/index.js
           cd /tmp
           zip -r $GITHUB_WORKSPACE/$PLUGIN_NAME.zip $PLUGIN_NAME/
 
