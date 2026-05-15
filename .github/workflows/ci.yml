@@ -37,6 +37,12 @@ jobs:
           node --check sidecar/dario-sidecar.mjs
           node --check sidecar/dario-auth.mjs
 
+      - name: Install wp-cli + download WordPress (for tests that require php-ai-client)
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar -o /tmp/wp
+          chmod +x /tmp/wp
+          /tmp/wp core download --version=7.0-RC4 --path=wordpress --skip-content
+
       - name: npm test
         run: npm test
 
