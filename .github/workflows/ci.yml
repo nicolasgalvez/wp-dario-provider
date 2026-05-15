@@ -6,17 +6,16 @@ on:
   push:
     branches: [main]
 
-# CI runs the same npm scripts a developer runs locally:
-#   - npm run lint   (php -l + node --check)
-#   - npm test       (PHP unit tests, host-side)
-#   - npm run check:pcp  (Plugin Check via Lando, requires `lando start` first)
+# Single job that runs the same `npm run check` a developer runs locally:
+#   npm run lint        php -l + node --check
+#   npm test            PHP unit tests
+#   npm run check:pcp   Plugin Check via Lando (requires lando start first)
 #
-# `npm run check` runs all three in sequence. We split into two jobs only
-# for parallel feedback, not because the scripts differ.
+# No CI-only assertions. If `npm run check` passes locally, this job passes.
 
 jobs:
-  lint-and-test:
-    name: Lint + unit tests
+  check:
+    name: npm run check
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -48,28 +47,6 @@ jobs:
 
       - name: Unit tests
         run: npm test
-
-  pcp:
-    name: Plugin Check (via Lando)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup PHP
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: '8.3'
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-
-      - name: Install Composer dependencies
-        run: composer install --no-progress --optimize-autoloader --no-dev
-
-      - name: Install Node dependencies
-        run: npm ci --ignore-scripts
 
       - name: Setup Lando
         uses: lando/setup-lando@v3
