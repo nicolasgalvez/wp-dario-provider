@@ -86,6 +86,7 @@ No implementation without a test. No refactoring without green tests.
 
 - **Pin `procyon-creative/jira-action-man` to a specific stable tag** (currently `v1.0.0`; no moving `v1` major tag is published). Re-check on each `/jira-setup` run.
 - **`.github/workflows/ci.yml`** runs on every PR + push to `main`. Single job that runs the same `npm run check` a developer runs locally: lint → unit tests → Lando boot → Plugin Check. No CI-only assertions; if `npm run check` passes locally, this passes.
+- **Branch protection on `main`** requires the `npm run check` status check to pass before a PR can merge. Force-push and branch deletion are disabled. Re-apply via `gh api -X PUT --input docs/branch-protection.json repos/procyon-creative/wp-dario-provider/branches/main/protection` if it ever gets cleared.
 - **`.github/workflows/jira.yml`** syncs ticket metadata to PRs and transitions tickets to `Done` on merge. See [docs/jira.md](docs/jira.md) for required secrets and board-column notes.
 - **`.github/workflows/main.yml`** builds the release zip and attaches it to the GitHub release on tag push (`v*`).
 
