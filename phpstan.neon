@@ -1,0 +1,20 @@
+includes:
+  - vendor/szepeviktor/phpstan-wordpress/extension.neon
+
+parameters:
+  level: 5
+  paths:
+    - src
+    - procyon-dario-provider.php
+  bootstrapFiles:
+    - tests/bootstrap.php
+    - wordpress/wp-includes/php-ai-client/autoload.php
+  scanDirectories:
+    - vendor
+    - wordpress/wp-includes/php-ai-client/src
+  scanFiles:
+    - wordpress/wp-includes/connectors.php
+  excludePaths:
+    - vendor/*
+    - node_modules/*
+    - wordpress/*

@@ -5,7 +5,7 @@
  * Plugin URI:        https://github.com/procyon-creative/wp-dario-provider
  * Description:       Connects WordPress to AI models via the Dario local LLM router using the WordPress 7.0 Connectors API.
  * Requires at least: 7.0
- * Requires PHP:      7.4
+ * Requires PHP:      8.0
  * Version:           0.2.1
  * Author:            Procyon Creative
  * Author URI:        https://github.com/procyon-creative
@@ -78,7 +78,10 @@ $procyon_dario_update_checker = PucFactory::buildUpdateChecker(
 	__FILE__,
 	'procyon-dario-provider'
 );
-$procyon_dario_update_checker->getVcsApi()->enableReleaseAssets();
+$procyon_dario_vcs_api = $procyon_dario_update_checker->getVcsApi();
+if ( $procyon_dario_vcs_api instanceof \YahnisElsts\PluginUpdateChecker\v5p6\Vcs\GitHubApi ) {
+	$procyon_dario_vcs_api->enableReleaseAssets();
+}
 $procyon_dario_update_checker->setBranch( 'main' );
 
 function register_provider(): void {

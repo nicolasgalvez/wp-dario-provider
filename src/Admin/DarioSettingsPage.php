@@ -101,7 +101,7 @@ class DarioSettingsPage {
 			return;
 		}
 		$screen = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
-		if ( $screen && isset( $screen->id ) && false !== strpos( (string) $screen->id, self::MENU_SLUG ) ) {
+		if ( $screen instanceof \WP_Screen && false !== strpos( $screen->id, self::MENU_SLUG ) ) {
 			return;
 		}
 

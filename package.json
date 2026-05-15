@@ -8,9 +8,10 @@
     "lint:php": "find src tests -name '*.php' -print0 | xargs -0 -n1 php -l",
     "lint:node": "node --check sidecar/dario-sidecar.mjs && node --check sidecar/dario-auth.mjs",
     "lint": "npm run lint:php && npm run lint:node",
+    "analyze": "vendor/bin/phpstan analyse --memory-limit=512M --no-progress",
     "test": "php -d zend.assertions=1 -d assert.exception=1 tests/test-model-metadata-directory.php && php -d zend.assertions=1 -d assert.exception=1 tests/test-dario-sidecar.php && php -d zend.assertions=1 -d assert.exception=1 tests/test-dario-settings.php && php -d zend.assertions=1 -d assert.exception=1 tests/test-dario-backend-config.php",
     "check:pcp": "scripts/check-pcp.sh",
-    "check": "npm run lint && npm test && npm run check:pcp",
+    "check": "npm run lint && npm run analyze && npm test && npm run check:pcp",
     "prepare": "husky"
   },
   "devDependencies": {

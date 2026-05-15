@@ -105,15 +105,10 @@ class DarioProvider extends AbstractApiProvider {
 			RequestAuthenticationMethod::apiKey(),
 		];
 
-		// Provider description support was added in php-ai-client 1.2.0.
-		if ( class_exists( 'WordPress\AiClient\AiClient' ) && defined( 'WordPress\AiClient\AiClient::VERSION' ) ) {
-			if ( version_compare( \WordPress\AiClient\AiClient::VERSION, '1.2.0', '>=' ) ) {
-				if ( function_exists( '__' ) ) {
-					$provider_metadata_args[] = __( 'Local LLM router supporting Claude, GPT, and OpenAI-compatible backends.', 'procyon-dario-provider' );
-				} else {
-					$provider_metadata_args[] = 'Local LLM router supporting Claude, GPT, and OpenAI-compatible backends.';
-				}
-			}
+		// WordPress 7.0+ bundles AiClient 1.3.1+ (provider description was added
+		// in 1.2.0). Plugin header `Requires at least: 7.0` makes this safe.
+		if ( class_exists( '\WordPress\AiClient\AiClient' ) ) {
+			$provider_metadata_args[] = __( 'Local LLM router supporting Claude, GPT, and OpenAI-compatible backends.', 'procyon-dario-provider' );
 		}
 
 		return new ProviderMetadata( ...$provider_metadata_args );

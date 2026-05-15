@@ -305,7 +305,7 @@ class DarioClaudeAuth {
 		}
 		if ( function_exists( 'posix_getpwuid' ) && function_exists( 'posix_geteuid' ) ) {
 			$info = @posix_getpwuid( posix_geteuid() );
-			if ( is_array( $info ) && isset( $info['dir'] ) && is_string( $info['dir'] ) && $info['dir'] !== '' ) {
+			if ( is_array( $info ) && $info['dir'] !== '' ) {
 				return $info['dir'];
 			}
 		}
