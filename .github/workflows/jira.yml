@@ -1,0 +1,59 @@
+name: Jira
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
+
+jobs:
+  jira-sync:
+    name: Sync ticket metadata to PR
+    runs-on: ubuntu-latest
+    steps:
+      - uses: procyon-creative/jira-action-man@v1.0.0
+        with:
+          projects: "WPD"
+          from: "branch,title,commits,body"
+          post_to_jira: true
+          jira_comment_mode: update
+          jira_base_url: ${{ secrets.JIRA_BASE_URL }}
+          jira_email: ${{ secrets.JIRA_EMAIL }}
+          jira_api_token: ${{ secrets.JIRA_API_TOKEN }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+  jira-transition-done:
+    name: Transition ticket to Done on merge
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    steps:
+      - uses: procyon-creative/jira-action-man@v1.0.0
+        id: jira
+        with:
+          projects: "WPD"
+          from: "branch,title,commits,body"
+          post_to_jira: false
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Transition Jira issues to Done
+        if: steps.jira.outputs.found == 'true'
+        env:
+          JIRA_BASE_URL: ${{ secrets.JIRA_BASE_URL }}
+          JIRA_EMAIL: ${{ secrets.JIRA_EMAIL }}
+          JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+          JIRA_KEYS: ${{ steps.jira.outputs.keys }}
+        run: |
+          for key in $(echo "$JIRA_KEYS" | jq -r '.[]'); do
+            echo "Transitioning $key to Done..."
+            TRANSITIONS=$(curl -s -u "$JIRA_EMAIL:$JIRA_API_TOKEN" \
+              "$JIRA_BASE_URL/rest/api/3/issue/$key/transitions")
+            DONE_ID=$(echo "$TRANSITIONS" | jq -r '.transitions[] | select(.name == "Done") | .id')
+            if [ -n "$DONE_ID" ]; then
+              curl -s -u "$JIRA_EMAIL:$JIRA_API_TOKEN" \
+                -X POST \
+                -H "Content-Type: application/json" \
+                -d "{\"transition\":{\"id\":\"$DONE_ID\"}}" \
+                "$JIRA_BASE_URL/rest/api/3/issue/$key/transitions"
+              echo "  ✓ $key → Done (transition ID: $DONE_ID)"
+            else
+              echo "  ⚠ No 'Done' transition available for $key"
+            fi
+          done

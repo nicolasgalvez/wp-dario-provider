@@ -27,10 +27,33 @@ vendor/                            Composer deps (plugin-update-checker)
 
 ## Developer Commands
 
+### One-time setup (any machine)
 ```bash
-composer install                   # Install PHP dependencies
-composer lint                      # Run phpcs (if configured)
-npm test                          # Run tests (if configured)
+composer install
+npm ci
+```
+
+### Boot the local dev WordPress (single command)
+```bash
+lando start          # Boots Lando + auto-installs WP, theme, and plugin
+```
+On first run this downloads WP 7.0 RC4 (without bundled themes/plugins via `wp core download --skip-content`), installs core, installs the `twentytwentyfive` theme, and activates `wp-dario-provider`. Idempotent on subsequent starts and on `lando rebuild -y`. The site is at http://wp-dario-test.lndo.site/ (admin/admin).
+
+### Tests
+```bash
+npm test             # PHP unit-style tests (host or container)
+lando ssh -s appserver -c 'cd /app && npm test'   # same tests, in the container
+```
+
+### Deploy plugin code changes into the running WP
+```bash
+lando deploy-plugin
+```
+
+### Plugin Check (PCP) — wp.org submission readiness (after WPD-1 lands)
+```bash
+lando wp plugin install plugin-check --activate
+lando wp plugin check wp-dario-provider
 ```
 
 ## Development Rules
@@ -57,9 +80,10 @@ No implementation without a test. No refactoring without green tests.
 
 ### GitHub Actions Rules
 
-- **ALWAYS use `procyon-creative/jira-action-man@v1`** (latest tagged major version) for any workflow that integrates with Jira on PRs.
-- CI workflows should lint and test on PRs/pushes to `main`.
-- Release workflow builds zip and attaches to GitHub release on tag push.
+- **Pin `procyon-creative/jira-action-man` to a specific stable tag** (currently `v1.0.0`; no moving `v1` major tag is published). Re-check on each `/jira-setup` run.
+- **`.github/workflows/ci.yml`** runs on every PR + push to `main`. It runs unit tests + lint, then boots Lando via `lando/setup-lando@v3` and verifies the dry plugin list + active theme + plugin activation. Same `npm test` runs locally and in CI.
+- **`.github/workflows/jira.yml`** syncs ticket metadata to PRs and transitions tickets to `Done` on merge. See [docs/jira.md](docs/jira.md) for required secrets and board-column notes.
+- **`.github/workflows/main.yml`** builds the release zip and attaches it to the GitHub release on tag push (`v*`).
 
 ## Version Release Process
 
@@ -71,6 +95,11 @@ Three places must have matching version bumps:
 Then tag + push: `git tag v0.1.x -m "message" && git push origin v0.1.x`
 
 The GitHub Actions workflow builds the zip and attaches it to the release automatically.
+
+## Issue Tracking
+
+- Jira board: [WPD project](https://procyoncreative.atlassian.net/jira/software/c/projects/WPD/boards/201)
+- See [docs/jira.md](docs/jira.md) for ticket conventions, required secrets, and the workflow that syncs PRs ↔ tickets.
 
 ## Things an Agent Might Get Wrong
 
