@@ -8,6 +8,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+use Dario\Sidecar\Concerns\WithFilesystem;
+
 /**
  * Writes Dario OpenAI-compatible backend credentials to disk in the format
  * Dario's own `saveBackend()` produces (`~/.dario/backends/<name>.json`).
@@ -15,6 +17,8 @@ if ( ! defined( 'ABSPATH' ) ) {
  * @since 0.1.5
  */
 class DarioBackendConfig {
+
+	use WithFilesystem;
 
 	private const NAME_PATTERN = '/^[A-Za-z0-9][A-Za-z0-9_\-.]{0,63}$/';
 
@@ -86,41 +90,47 @@ class DarioBackendConfig {
 			return [ 'ok' => false, 'error' => 'missing base url' ];
 		}
 
+		$fs  = self::fs();
 		$dir = self::backendsDir();
-		if ( ! is_dir( $dir ) && ! @mkdir( $dir, 0700, true ) && ! is_dir( $dir ) ) {
-			return [ 'ok' => false, 'error' => 'unable to create backends directory: ' . $dir ];
+		if ( ! $fs->is_dir( $dir ) ) {
+			$parent = self::darioDir();
+			if ( ! $fs->is_dir( $parent ) && ! $fs->mkdir( $parent, 0700 ) ) {
+				return [ 'ok' => false, 'error' => 'unable to create dario directory: ' . $parent ];
+			}
+			if ( ! $fs->mkdir( $dir, 0700 ) ) {
+				return [ 'ok' => false, 'error' => 'unable to create backends directory: ' . $dir ];
+			}
 		}
 
 		$payload = self::buildPayload( $name, $apiKey, $baseUrl, $provider );
 		$json    = self::encode( $payload );
 
+		// Atomic temp+rename matches Dario's own saveBackend() write pattern.
 		$tmp = $path . '.tmp';
-		if ( file_put_contents( $tmp, $json ) === false ) {
+		if ( ! $fs->put_contents( $tmp, $json, 0600 ) ) {
 			return [ 'ok' => false, 'error' => 'unable to write backend file' ];
 		}
-
-		@chmod( $tmp, 0600 );
-		if ( ! @rename( $tmp, $path ) ) {
-			@unlink( $tmp );
+		if ( ! $fs->move( $tmp, $path, true ) ) {
+			$fs->delete( $tmp );
 			return [ 'ok' => false, 'error' => 'unable to move backend file into place' ];
 		}
-		@chmod( $path, 0600 );
+		$fs->chmod( $path, 0600 );
 
 		return [ 'ok' => true, 'path' => $path ];
 	}
 
 	public static function remove( string $name ): bool {
 		$path = self::backendPath( $name );
-		if ( $path === null || ! is_file( $path ) ) {
+		if ( $path === null || ! self::fs()->is_file( $path ) ) {
 			return false;
 		}
 
-		return @unlink( $path );
+		return (bool) self::fs()->delete( $path );
 	}
 
 	public static function exists( string $name ): bool {
 		$path = self::backendPath( $name );
-		return $path !== null && is_file( $path );
+		return $path !== null && self::fs()->is_file( $path );
 	}
 
 	private static function homeDir(): string {

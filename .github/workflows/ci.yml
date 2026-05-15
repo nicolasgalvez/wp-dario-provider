@@ -111,31 +111,24 @@ jobs:
       - name: Plugin Check (excluding deferred exceptions)
         run: |
           lando wp plugin install plugin-check --activate
-          # Excluded code list mirrors docs/plugin-check.md "Deferred exceptions" section.
-          # If a new error appears outside this list, the step fails and the new
-          # error must be either fixed or explicitly added here + documented.
-          IGNORE_CODES="WordPress.WP.AlternativeFunctions.unlink_unlink"
-          IGNORE_CODES="$IGNORE_CODES,WordPress.WP.AlternativeFunctions.file_system_operations_chmod"
-          IGNORE_CODES="$IGNORE_CODES,WordPress.WP.AlternativeFunctions.file_system_operations_mkdir"
-          IGNORE_CODES="$IGNORE_CODES,WordPress.WP.AlternativeFunctions.file_system_operations_fclose"
-          IGNORE_CODES="$IGNORE_CODES,WordPress.WP.AlternativeFunctions.rename_rename"
-          IGNORE_CODES="$IGNORE_CODES,WordPress.WP.AlternativeFunctions.file_system_operations_is_writable"
-          IGNORE_CODES="$IGNORE_CODES,WordPress.WP.AlternativeFunctions.file_system_operations_fopen"
-          IGNORE_CODES="$IGNORE_CODES,WordPress.WP.AlternativeFunctions.file_system_operations_fwrite"
-          IGNORE_CODES="$IGNORE_CODES,WordPress.WP.AlternativeFunctions.file_system_operations_fsockopen"
+          # Only the plugin_updater rule is deferred (tracked in WPD-5).
+          # Filesystem rules used to be here but are now handled via the
+          # WithFilesystem trait + scoped phpcs:ignore on permanent exceptions.
+          # PCP exits 0 either way; we count actual ERROR lines (the table
+          # rows) rather than parse the json output, which mixes the success
+          # banner with the error list.
           OUTPUT=$(lando wp plugin check wp-dario-provider \
             --exclude-checks=plugin_updater \
-            --ignore-codes="$IGNORE_CODES" \
-            --ignore-warnings \
-            --format=json 2>&1)
-          if [ -n "$OUTPUT" ]; then
-            echo "::error::Plugin Check found new errors outside the documented exception list"
+            --ignore-warnings 2>&1)
+          ERROR_COUNT=$(echo "$OUTPUT" | grep -cE '^[0-9]+\s+[0-9]+\s+ERROR' || true)
+          if [ "$ERROR_COUNT" -gt 0 ]; then
+            echo "::error::Plugin Check found $ERROR_COUNT errors outside the documented exception list"
             echo "$OUTPUT"
             echo ""
-            echo "If these are intentional, add the codes to docs/plugin-check.md and to the IGNORE_CODES list in ci.yml."
+            echo "If these are intentional, add the codes to docs/plugin-check.md and to --exclude-checks/--ignore-codes in ci.yml."
             exit 1
           fi
-          echo "✓ Plugin Check clean (excluding documented deferred exceptions)"
+          echo "✓ Plugin Check clean (excluding plugin_updater, tracked in WPD-5)"
 
       - name: Show Lando logs on failure
         if: failure()

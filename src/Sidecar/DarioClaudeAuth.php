@@ -9,6 +9,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 use Dario\Admin\DarioSettings;
+use Dario\Sidecar\Concerns\WithFilesystem;
 
 /**
  * Claude OAuth helpers for the WordPress admin UI.
@@ -20,6 +21,8 @@ use Dario\Admin\DarioSettings;
  * @since 0.1.5
  */
 class DarioClaudeAuth {
+
+	use WithFilesystem;
 
 	private const SESSION_TRANSIENT_PREFIX = 'dario_oauth_session_';
 	private const SESSION_TTL              = 600;
@@ -90,16 +93,19 @@ class DarioClaudeAuth {
 
 		$session_id = self::generateSessionId();
 		$dir        = self::sessionDir( $plugin_dir );
-		if ( ! is_dir( $dir ) && ! @mkdir( $dir, 0700, true ) && ! is_dir( $dir ) ) {
+		$fs         = self::fs();
+		if ( ! $fs->is_dir( $dir ) && ! wp_mkdir_p( $dir ) ) {
 			return [ 'ok' => false, 'message' => 'Could not create OAuth session directory.' ];
 		}
 
 		$fifo = $dir . '/' . $session_id . '.fifo';
 		$log  = $dir . '/' . $session_id . '.log';
 
-		if ( file_exists( $fifo ) ) {
-			@unlink( $fifo );
+		if ( $fs->exists( $fifo ) ) {
+			// FIFO sentinel: WP_Filesystem treats FIFOs unreliably, use wp_delete_file.
+			wp_delete_file( $fifo );
 		}
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_posix_mkfifo -- WP_Filesystem has no equivalent for named pipes.
 		if ( ! @posix_mkfifo( $fifo, 0600 ) ) {
 			return [ 'ok' => false, 'message' => 'Could not create OAuth FIFO.' ];
 		}
@@ -119,7 +125,7 @@ class DarioClaudeAuth {
 		$pid_output = shell_exec( $cmd );
 		$pid        = is_string( $pid_output ) ? (int) trim( $pid_output ) : 0;
 		if ( $pid <= 0 ) {
-			@unlink( $fifo );
+			wp_delete_file( $fifo );
 			return [ 'ok' => false, 'message' => 'Failed to start Dario CLI.' ];
 		}
 
@@ -172,16 +178,22 @@ class DarioClaudeAuth {
 		$log  = (string) ( $session['log'] ?? '' );
 		$pid  = (int) ( $session['pid'] ?? 0 );
 
-		if ( ! file_exists( $fifo ) ) {
+		if ( ! self::fs()->exists( $fifo ) ) {
 			self::cleanupSession( $session_id );
 			return [ 'ok' => false, 'message' => 'OAuth session is no longer active. Start a new login attempt.' ];
 		}
 
+		// FIFO write: WP_Filesystem::put_contents would truncate-and-write, which
+		// doesn't work for named pipes (no seekable target). Use direct fopen/
+		// fwrite/fclose. phpcs:ignore for the next four file-op calls.
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fopen -- FIFO write; no WP_Filesystem equivalent.
 		$handle = @fopen( $fifo, 'wb' );
 		if ( $handle === false ) {
 			return [ 'ok' => false, 'message' => 'Could not write to OAuth session FIFO.' ];
 		}
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fwrite -- FIFO write.
 		fwrite( $handle, $pasted . "\n" );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- FIFO write.
 		fclose( $handle );
 
 		$exited = self::waitForExit( $pid, self::EXIT_WAIT_MICROSECONDS );
@@ -251,14 +263,15 @@ class DarioClaudeAuth {
 			return [ 'ok' => false, 'message' => 'claudeAiOauth.scopes must be an array if provided.' ];
 		}
 
+		$fs  = self::fs();
 		$dir = self::darioConfigDir();
-		if ( ! is_dir( $dir ) && ! @mkdir( $dir, 0700, true ) && ! is_dir( $dir ) ) {
+		if ( ! $fs->is_dir( $dir ) && ! $fs->mkdir( $dir, 0700 ) ) {
 			return [ 'ok' => false, 'message' => 'Could not create ~/.dario directory.' ];
 		}
 
 		$path = $dir . '/credentials.json';
 		$tmp  = $path . '.tmp.' . bin2hex( random_bytes( 4 ) );
-		$payload = json_encode(
+		$payload = wp_json_encode(
 			[ 'claudeAiOauth' => [
 				'accessToken'  => (string) $oauth['accessToken'],
 				'refreshToken' => (string) $oauth['refreshToken'],
@@ -268,15 +281,14 @@ class DarioClaudeAuth {
 			JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES
 		);
 
-		if ( file_put_contents( $tmp, (string) $payload ) === false ) {
+		if ( ! $fs->put_contents( $tmp, (string) $payload, 0600 ) ) {
 			return [ 'ok' => false, 'message' => 'Could not write credentials file.' ];
 		}
-		@chmod( $tmp, 0600 );
-		if ( ! @rename( $tmp, $path ) ) {
-			@unlink( $tmp );
+		if ( ! $fs->move( $tmp, $path, true ) ) {
+			$fs->delete( $tmp );
 			return [ 'ok' => false, 'message' => 'Could not move credentials file into place.' ];
 		}
-		@chmod( $path, 0600 );
+		$fs->chmod( $path, 0600 );
 
 		return [ 'ok' => true, 'message' => 'Dario credentials imported.', 'path' => $path ];
 	}
@@ -321,10 +333,11 @@ class DarioClaudeAuth {
 	private static function sessionDir( string $plugin_dir ): string {
 		if ( defined( 'WP_CONTENT_DIR' ) ) {
 			$dir = rtrim( (string) WP_CONTENT_DIR, '/\\' ) . '/dario-provider/oauth';
-			if ( ! is_dir( $dir ) ) {
+			$fs  = self::fs();
+			if ( ! $fs->is_dir( $dir ) ) {
 				wp_mkdir_p( $dir );
 			}
-			if ( is_dir( $dir ) && is_writable( $dir ) ) {
+			if ( $fs->is_dir( $dir ) && $fs->is_writable( $dir ) ) {
 				return $dir;
 			}
 		}
@@ -364,15 +377,16 @@ class DarioClaudeAuth {
 			$pid  = (int) ( $data['pid'] ?? 0 );
 			$fifo = (string) ( $data['fifo'] ?? '' );
 			$log  = (string) ( $data['log'] ?? '' );
+			$fs   = self::fs();
 
 			if ( $pid > 0 ) {
 				@shell_exec( 'kill ' . escapeshellarg( (string) $pid ) . ' 2>/dev/null' );
 			}
-			if ( $fifo !== '' && file_exists( $fifo ) ) {
-				@unlink( $fifo );
+			if ( $fifo !== '' && $fs->exists( $fifo ) ) {
+				wp_delete_file( $fifo );
 			}
-			if ( $log !== '' && file_exists( $log ) ) {
-				@unlink( $log );
+			if ( $log !== '' && $fs->exists( $log ) ) {
+				wp_delete_file( $log );
 			}
 		}
 
@@ -382,11 +396,12 @@ class DarioClaudeAuth {
 	}
 
 	private static function waitForAuthorizeUrl( string $log_path, int $microseconds ): ?string {
+		$fs      = self::fs();
 		$elapsed = 0;
 		$step    = 200_000;
 		while ( $elapsed < $microseconds ) {
-			if ( is_file( $log_path ) ) {
-				$contents = (string) @file_get_contents( $log_path );
+			if ( $fs->is_file( $log_path ) ) {
+				$contents = (string) $fs->get_contents( $log_path );
 				$url      = self::extractAuthorizeUrl( $contents );
 				if ( $url !== null ) {
 					return $url;
@@ -439,25 +454,19 @@ class DarioClaudeAuth {
 	}
 
 	private static function tailFile( string $path, int $bytes ): string {
-		if ( ! is_file( $path ) ) {
+		$fs = self::fs();
+		if ( ! $fs->is_file( $path ) ) {
 			return '';
 		}
 
-		$size = (int) @filesize( $path );
-		if ( $size <= 0 ) {
-			return '';
+		// WP_Filesystem doesn't expose seekable reads, so we read the whole
+		// file and slice. OAuth log files are bounded (a few KB at most), so
+		// this is fine.
+		$contents = (string) $fs->get_contents( $path );
+		if ( strlen( $contents ) <= $bytes ) {
+			return $contents;
 		}
-
-		$offset = $size > $bytes ? $size - $bytes : 0;
-		$fh     = @fopen( $path, 'rb' );
-		if ( $fh === false ) {
-			return '';
-		}
-
-		fseek( $fh, $offset );
-		$data = (string) stream_get_contents( $fh );
-		fclose( $fh );
-		return $data;
+		return substr( $contents, -1 * $bytes );
 	}
 
 	private static function logIndicatesSuccess( string $log ): bool {

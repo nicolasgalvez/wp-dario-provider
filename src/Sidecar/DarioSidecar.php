@@ -9,6 +9,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 use Dario\Admin\DarioSettings;
+use Dario\Sidecar\Concerns\WithFilesystem;
 
 /**
  * Starts and stops the optional Node-based Dario proxy sidecar.
@@ -16,6 +17,8 @@ use Dario\Admin\DarioSettings;
  * @since 0.1.4
  */
 class DarioSidecar {
+
+	use WithFilesystem;
 
 	private const PID_OPTION              = 'dario_provider_sidecar_pid';
 	private const CONNECTOR_KEY_OPTION    = 'connectors_ai_dario_api_key';
@@ -247,20 +250,26 @@ class DarioSidecar {
 	 */
 	public static function lastLogLines( string $plugin_dir, int $lines = 25 ): array {
 		$path = self::logFile( $plugin_dir );
-		if ( ! is_file( $path ) ) {
+		$fs   = self::fs();
+		if ( ! $fs->is_file( $path ) ) {
 			return [];
 		}
 
-		$contents = @file( $path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES );
-		if ( ! is_array( $contents ) ) {
+		$contents = (string) $fs->get_contents( $path );
+		if ( $contents === '' ) {
 			return [];
 		}
 
-		if ( count( $contents ) <= $lines ) {
-			return $contents;
+		$rows = array_values( array_filter(
+			preg_split( "/\r?\n/", $contents ) ?: [],
+			static fn( $row ) => $row !== ''
+		) );
+
+		if ( count( $rows ) <= $lines ) {
+			return $rows;
 		}
 
-		return array_slice( $contents, -1 * $lines );
+		return array_slice( $rows, -1 * $lines );
 	}
 
 	private static function startIfNeeded( string $plugin_dir ): int {
@@ -301,10 +310,11 @@ class DarioSidecar {
 	private static function writableDirectory( string $plugin_dir ): string {
 		if ( defined( 'WP_CONTENT_DIR' ) ) {
 			$dir = rtrim( (string) WP_CONTENT_DIR, '/\\' ) . '/dario-provider';
-			if ( ! is_dir( $dir ) ) {
+			$fs  = self::fs();
+			if ( ! $fs->is_dir( $dir ) ) {
 				wp_mkdir_p( $dir );
 			}
-			if ( is_dir( $dir ) && is_writable( $dir ) ) {
+			if ( $fs->is_dir( $dir ) && $fs->is_writable( $dir ) ) {
 				return $dir;
 			}
 		}
@@ -343,8 +353,12 @@ class DarioSidecar {
 	}
 
 	private static function isPortOpen( string $host, int $port ): bool {
+		// Port liveness check: opens a TCP socket and immediately closes it.
+		// WP_Filesystem has no equivalent; this is permanent phpcs:ignore.
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fsockopen -- TCP probe, not file I/O.
 		$socket = @fsockopen( $host, $port, $errno, $errstr, 0.2 );
 		if ( is_resource( $socket ) ) {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- closes the TCP socket above.
 			fclose( $socket );
 			return true;
 		}
@@ -372,11 +386,11 @@ class DarioSidecar {
 	}
 
 	private static function log( string $plugin_dir, string $message ): void {
-		file_put_contents(
-			self::logFile( $plugin_dir ),
-			sprintf( "[%s] %s\n", gmdate( 'c' ), $message ),
-			FILE_APPEND
-		);
+		$path     = self::logFile( $plugin_dir );
+		$line     = sprintf( "[%s] %s\n", gmdate( 'c' ), $message );
+		$fs       = self::fs();
+		$existing = $fs->is_file( $path ) ? (string) $fs->get_contents( $path ) : '';
+		$fs->put_contents( $path, $existing . $line, 0644 );
 	}
 
 	private static function updateOption( string $name, int $value ): void {
