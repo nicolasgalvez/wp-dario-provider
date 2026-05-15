@@ -43,7 +43,6 @@ services:
         rsync -a --delete /app/vendor/ "$PLUGIN_DIR/vendor/" 2>/dev/null || true
         rsync -a --delete /app/node_modules/ "$PLUGIN_DIR/node_modules/" 2>/dev/null || true
         cp /app/procyon-dario-provider.php "$PLUGIN_DIR/"
-        cp /app/plugin.json "$PLUGIN_DIR/"
         cp /app/package.json "$PLUGIN_DIR/"
         cp /app/package-lock.json "$PLUGIN_DIR/"
         cp /app/readme.txt "$PLUGIN_DIR/"
@@ -140,7 +139,6 @@ tooling:
         rsync -a --delete /app/vendor/ "$PLUGIN_DIR/vendor/"
         rsync -a --delete /app/node_modules/ "$PLUGIN_DIR/node_modules/"
         cp /app/procyon-dario-provider.php "$PLUGIN_DIR/"
-        cp /app/plugin.json "$PLUGIN_DIR/"
         cp /app/package.json "$PLUGIN_DIR/"
         cp /app/package-lock.json "$PLUGIN_DIR/"
         cp /app/readme.txt "$PLUGIN_DIR/"
