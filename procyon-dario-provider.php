@@ -73,13 +73,13 @@ if ( is_admin() ) {
 	DarioSettingsPage::bootstrap( __FILE__ );
 }
 
-$dario_update_checker = PucFactory::buildUpdateChecker(
+$procyon_dario_update_checker = PucFactory::buildUpdateChecker(
 	'https://github.com/procyon-creative/wp-dario-provider/',
 	__FILE__,
 	'procyon-dario-provider'
 );
-$dario_update_checker->getVcsApi()->enableReleaseAssets();
-$dario_update_checker->setBranch( 'main' );
+$procyon_dario_update_checker->getVcsApi()->enableReleaseAssets();
+$procyon_dario_update_checker->setBranch( 'main' );
 
 function register_provider(): void {
 	if ( ! class_exists( 'WordPress\AiClient\AiClient' ) ) {

@@ -31,11 +31,9 @@ We currently distribute via GitHub releases, not wordpress.org, so this is inten
 
 If WPD-5 lands with a wp.org submission decision, PUC and the `Update URI` header are removed and this exception goes away.
 
-### Plugin slug contains "wp"
+### Plugin slug contains "wp" (resolved)
 
-PCP warning: `trademarked_term`. The slug `wp-dario-provider` contains the restricted prefix `wp` which wp.org will not accept. (Resolved in 0.2.0 — slug is now `procyon-dario-provider`. See WPD-7.)
-
-Tied to the same wp.org distribution decision as the updater above. **Tracked in:** [WPD-5](https://procyoncreative.atlassian.net/browse/WPD-5).
+~~PCP warning: `trademarked_term`. The slug `wp-dario-provider` contains the restricted prefix `wp`.~~ Resolved in 0.2.0 — slug is now `procyon-dario-provider` ([WPD-7](https://procyoncreative.atlassian.net/browse/WPD-7)). The check now fails the build if this warning ever reappears.
 
 ## Permanent exceptions (already applied as `phpcs:ignore`)
 
