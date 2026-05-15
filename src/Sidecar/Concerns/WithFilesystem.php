@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Dario\Sidecar\Concerns;
+namespace Procyon\Dario\Sidecar\Concerns;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;

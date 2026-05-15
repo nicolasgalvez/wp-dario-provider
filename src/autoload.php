@@ -15,7 +15,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 spl_autoload_register(static function (string $class): void {
-	$prefix = 'Dario\\';
+	$prefix = 'Procyon\\Dario\\';
 	$base_dir = __DIR__ . '/';
 
 	$len = strlen($prefix);

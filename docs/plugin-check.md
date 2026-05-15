@@ -6,7 +6,7 @@
 
 ```bash
 lando wp plugin install plugin-check --activate
-lando wp plugin check wp-dario-provider
+lando wp plugin check procyon-dario-provider
 ```
 
 ## CI
@@ -16,7 +16,7 @@ lando wp plugin check wp-dario-provider
 To reproduce the exact CI invocation locally:
 
 ```bash
-lando wp plugin check wp-dario-provider \
+lando wp plugin check procyon-dario-provider \
   --exclude-checks=plugin_updater \
   --ignore-warnings \
   --format=json
@@ -40,7 +40,7 @@ If WPD-5 lands with a wp.org submission decision, PUC and the `Update URI` heade
 
 ### Plugin slug contains "wp"
 
-PCP warning: `trademarked_term`. The slug `wp-dario-provider` contains the restricted prefix `wp` which wp.org will not accept.
+PCP warning: `trademarked_term`. The slug `wp-dario-provider` contains the restricted prefix `wp` which wp.org will not accept. (Resolved in 0.2.0 — slug is now `procyon-dario-provider`. See WPD-7.)
 
 Tied to the same wp.org distribution decision as the updater above. **Tracked in:** [WPD-5](https://procyoncreative.atlassian.net/browse/WPD-5).
 

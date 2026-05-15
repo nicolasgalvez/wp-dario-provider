@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace Dario\Sidecar;
+namespace Procyon\Dario\Sidecar;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-use Dario\Admin\DarioSettings;
-use Dario\Sidecar\Concerns\WithFilesystem;
+use Procyon\Dario\Admin\DarioSettings;
+use Procyon\Dario\Sidecar\Concerns\WithFilesystem;
 
 /**
  * Starts and stops the optional Node-based Dario proxy sidecar.
@@ -20,8 +20,13 @@ class DarioSidecar {
 
 	use WithFilesystem;
 
-	private const PID_OPTION              = 'dario_provider_sidecar_pid';
-	private const CONNECTOR_KEY_OPTION    = 'connectors_ai_dario_api_key';
+	private const PID_OPTION              = 'procyon_dario_sidecar_pid';
+	// Auto-derived by WP core from the provider ID we register
+	// (Procyon\Dario\Provider\DarioProvider::createProviderMetadata returns
+	// 'procyon_dario'). The DEFAULT_CONNECTOR_KEY value stays as 'dario'
+	// because that's the literal Dario's local proxy expects in the
+	// Authorization header (per the upstream README), not our identifier.
+	private const CONNECTOR_KEY_OPTION    = 'connectors_ai_procyon_dario_api_key';
 	private const DEFAULT_CONNECTOR_KEY   = 'dario';
 
 	/**

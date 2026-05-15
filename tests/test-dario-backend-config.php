@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/bootstrap.php';
 
-use Dario\Sidecar\DarioBackendConfig;
+use Procyon\Dario\Sidecar\DarioBackendConfig;
 
 // Name validation matches Dario's own regex.
 assert( true === DarioBackendConfig::isValidName( 'wordpress' ) );

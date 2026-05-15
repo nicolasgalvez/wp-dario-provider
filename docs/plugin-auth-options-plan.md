@@ -135,8 +135,8 @@ Phase 1 behavior:
 
   ```bash
   lando dario login
-  lando wp plugin deactivate wp-dario-provider
-  lando wp plugin activate wp-dario-provider
+  lando wp plugin deactivate procyon-dario-provider
+  lando wp plugin activate procyon-dario-provider
   ```
 
 Phase 2 possible behavior:
@@ -314,13 +314,13 @@ After implementation:
 
 ```bash
 npm test
-php -l wp-dario-provider.php
+php -l procyon-dario-provider.php
 find src tests -name '*.php' -print0 | xargs -0 -n1 php -l
 node --check sidecar/dario-sidecar.mjs
 lando rebuild -y
 lando deploy-plugin
-lando wp plugin deactivate wp-dario-provider
-lando wp plugin activate wp-dario-provider
+lando wp plugin deactivate procyon-dario-provider
+lando wp plugin activate procyon-dario-provider
 ```
 
 Then verify:
@@ -336,7 +336,7 @@ If an OpenAI-compatible backend API key is configured, test generation through W
 
 When complete, bump:
 
-- `wp-dario-provider.php`
+- `procyon-dario-provider.php`
 - `plugin.json`
 - `readme.txt`
 - `package.json`

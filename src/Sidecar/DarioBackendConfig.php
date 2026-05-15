@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace Dario\Sidecar;
+namespace Procyon\Dario\Sidecar;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-use Dario\Sidecar\Concerns\WithFilesystem;
+use Procyon\Dario\Sidecar\Concerns\WithFilesystem;
 
 /**
  * Writes Dario OpenAI-compatible backend credentials to disk in the format

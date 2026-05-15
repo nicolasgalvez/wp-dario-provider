@@ -35,14 +35,14 @@ services:
       # nesting bug that occurs when the destination dir already exists,
       # and removes files that no longer exist in the source.
       - |
-        PLUGIN_DIR=/app/wordpress/wp-content/plugins/wp-dario-provider
+        PLUGIN_DIR=/app/wordpress/wp-content/plugins/procyon-dario-provider
         mkdir -p "$PLUGIN_DIR"
         rsync -a --delete /app/src/ "$PLUGIN_DIR/src/"
         rsync -a --delete /app/sidecar/ "$PLUGIN_DIR/sidecar/"
         rsync -a --delete /app/assets/ "$PLUGIN_DIR/assets/"
         rsync -a --delete /app/vendor/ "$PLUGIN_DIR/vendor/" 2>/dev/null || true
         rsync -a --delete /app/node_modules/ "$PLUGIN_DIR/node_modules/" 2>/dev/null || true
-        cp /app/wp-dario-provider.php "$PLUGIN_DIR/"
+        cp /app/procyon-dario-provider.php "$PLUGIN_DIR/"
         cp /app/plugin.json "$PLUGIN_DIR/"
         cp /app/package.json "$PLUGIN_DIR/"
         cp /app/package-lock.json "$PLUGIN_DIR/"
@@ -83,8 +83,8 @@ services:
           echo "Installing default theme (twentytwentyfive)..."
           wp theme install twentytwentyfive --activate
         fi
-        if ! wp plugin is-active wp-dario-provider 2>/dev/null; then
-          wp plugin activate wp-dario-provider
+        if ! wp plugin is-active procyon-dario-provider 2>/dev/null; then
+          wp plugin activate procyon-dario-provider
         fi
     overrides:
       environment:
@@ -119,14 +119,14 @@ tooling:
     description: Copy plugin files into WP plugins dir (use after editing src/)
     cmd:
       - |
-        PLUGIN_DIR=/app/wordpress/wp-content/plugins/wp-dario-provider
+        PLUGIN_DIR=/app/wordpress/wp-content/plugins/procyon-dario-provider
         mkdir -p "$PLUGIN_DIR"
         rsync -a --delete /app/src/ "$PLUGIN_DIR/src/"
         rsync -a --delete /app/sidecar/ "$PLUGIN_DIR/sidecar/"
         rsync -a --delete /app/assets/ "$PLUGIN_DIR/assets/"
         rsync -a --delete /app/vendor/ "$PLUGIN_DIR/vendor/"
         rsync -a --delete /app/node_modules/ "$PLUGIN_DIR/node_modules/"
-        cp /app/wp-dario-provider.php "$PLUGIN_DIR/"
+        cp /app/procyon-dario-provider.php "$PLUGIN_DIR/"
         cp /app/plugin.json "$PLUGIN_DIR/"
         cp /app/package.json "$PLUGIN_DIR/"
         cp /app/package-lock.json "$PLUGIN_DIR/"
@@ -136,4 +136,4 @@ tooling:
   dario:
     service: appserver
     description: Run the bundled Dario CLI from the installed plugin
-    cmd: /app/wordpress/wp-content/plugins/wp-dario-provider/node_modules/.bin/dario
+    cmd: /app/wordpress/wp-content/plugins/procyon-dario-provider/node_modules/.bin/dario

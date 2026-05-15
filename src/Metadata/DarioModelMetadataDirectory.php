@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Dario\Metadata;
+namespace Procyon\Dario\Metadata;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
