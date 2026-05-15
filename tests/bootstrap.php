@@ -77,4 +77,35 @@ if ( ! function_exists( 'wp_mkdir_p' ) ) {
 // Several src/ files call function_exists() before update_option/get_option/
 // set_transient/etc. so they work fine without stubs in unit tests.
 
+// In-memory option store for tests that need WP option semantics. Tests opt
+// in by calling test_option_store_reset() at the top of the test file. The
+// stubs are no-op-shaped: if a test never resets the store, the functions
+// return the default and look like un-stubbed calls.
+$GLOBALS['__test_option_store'] = [];
+function test_option_store_reset(): void {
+	$GLOBALS['__test_option_store'] = [];
+}
+if ( ! function_exists( 'get_option' ) ) {
+	function get_option( $name, $default = false ) {
+		return array_key_exists( $name, $GLOBALS['__test_option_store'] )
+			? $GLOBALS['__test_option_store'][ $name ]
+			: $default;
+	}
+}
+if ( ! function_exists( 'update_option' ) ) {
+	function update_option( $name, $value, $autoload = null ) {
+		$GLOBALS['__test_option_store'][ $name ] = $value;
+		return true;
+	}
+}
+if ( ! function_exists( 'delete_option' ) ) {
+	function delete_option( $name ) {
+		if ( ! array_key_exists( $name, $GLOBALS['__test_option_store'] ) ) {
+			return false;
+		}
+		unset( $GLOBALS['__test_option_store'][ $name ] );
+		return true;
+	}
+}
+
 require_once __DIR__ . '/../src/autoload.php';

@@ -23,6 +23,7 @@ namespace Procyon\Dario;
 
 use YahnisElsts\PluginUpdateChecker\v5\PucFactory;
 use Procyon\Dario\Admin\DarioSettingsPage;
+use Procyon\Dario\Admin\MigrationShim;
 use Procyon\Dario\Sidecar\DarioSidecar;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -33,37 +34,9 @@ require_once __DIR__ . '/vendor/autoload.php';
 require_once __DIR__ . '/src/autoload.php';
 
 register_activation_hook( __FILE__, static function (): void {
-	migrate_legacy_options();
+	MigrationShim::run();
 	DarioSidecar::activate( __FILE__ );
 } );
-
-/**
- * One-time migration from the pre-0.2.0 option/transient names that used
- * `dario_*` prefixes to the procyon-prefixed names. Runs on activation;
- * idempotent (no-op if the new option already has a value or the legacy
- * option is missing).
- */
-function migrate_legacy_options(): void {
-	$option_map = [
-		'dario_provider_settings'      => 'procyon_dario_settings',
-		'dario_provider_sidecar_pid'   => 'procyon_dario_sidecar_pid',
-		'dario_provider_flash'         => 'procyon_dario_flash',
-		'dario_provider_oauth_active'  => 'procyon_dario_oauth_active',
-		'connectors_ai_dario_api_key'  => 'connectors_ai_procyon_dario_api_key',
-	];
-	foreach ( $option_map as $old => $new ) {
-		$legacy = get_option( $old, null );
-		if ( $legacy === null || $legacy === false ) {
-			continue;
-		}
-		// Only copy if the new option is unset; never clobber a value the user
-		// already set after the rename.
-		if ( get_option( $new, null ) === null ) {
-			update_option( $new, $legacy, false );
-		}
-		delete_option( $old );
-	}
-}
 
 register_deactivation_hook( __FILE__, static function (): void {
 	DarioSidecar::deactivate();
