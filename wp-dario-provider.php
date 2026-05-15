@@ -6,7 +6,7 @@
  * Description:       Connects WordPress to AI models via the Dario local LLM router using the WordPress 7.0 Connectors API.
  * Requires at least: 7.0
  * Requires PHP:      7.4
- * Version:           0.1.2
+ * Version:           0.1.3
  * Author:            Nicolas Galvez
  * Author URI:        https://github.com/nicolasgalvez
  * License:           GPL-2.0-or-later

@@ -33,11 +33,12 @@ jobs:
           mkdir -p /tmp/$PLUGIN_NAME
           cp -r src/ /tmp/$PLUGIN_NAME/src/
           cp -r assets/ /tmp/$PLUGIN_NAME/assets/
-          cp vendor/ /tmp/$PLUGIN_NAME/vendor/ 2>/dev/null || true
+          cp -r vendor/ /tmp/$PLUGIN_NAME/vendor/
           cp wp-dario-provider.php /tmp/$PLUGIN_NAME/
           cp plugin.json /tmp/$PLUGIN_NAME/
           cp readme.txt /tmp/$PLUGIN_NAME/
           cp LICENSE /tmp/$PLUGIN_NAME/ 2>/dev/null || true
+          test -f /tmp/$PLUGIN_NAME/vendor/autoload.php
           cd /tmp
           zip -r $GITHUB_WORKSPACE/$PLUGIN_NAME.zip $PLUGIN_NAME/
 
