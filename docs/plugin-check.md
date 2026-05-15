@@ -5,22 +5,15 @@
 ## Run locally
 
 ```bash
-lando wp plugin install plugin-check --activate
-lando wp plugin check procyon-dario-provider
+lando start          # if not already running; the run-block installs plugin-check
+npm run check:pcp    # same script CI runs
 ```
+
+`npm run check:pcp` invokes `scripts/check-pcp.sh`, which calls `lando wp plugin check` with the documented exclusions and counts ERROR rows. Exits non-zero if any error is reported outside the deferred list.
 
 ## CI
 
-`.github/workflows/ci.yml` runs PCP on every PR with the deferred-exception list applied (see below). The job fails if any error appears outside that list.
-
-To reproduce the exact CI invocation locally:
-
-```bash
-lando wp plugin check procyon-dario-provider \
-  --exclude-checks=plugin_updater \
-  --ignore-warnings \
-  --format=json
-```
+`.github/workflows/ci.yml` `pcp` job runs `npm run check:pcp` after `lando start`. There is no CI-specific PCP logic — it's the same script and exit-code semantics as local.
 
 ## Deferred exceptions (tracked in Jira)
 

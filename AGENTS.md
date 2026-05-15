@@ -39,11 +39,14 @@ lando start          # Boots Lando + auto-installs WP, theme, and plugin
 ```
 On first run this downloads WP 7.0 RC4 (without bundled themes/plugins via `wp core download --skip-content`), installs core, installs the `twentytwentyfive` theme, and activates `procyon-dario-provider`. Idempotent on subsequent starts and on `lando rebuild -y`. The site is at http://wp-dario-test.lndo.site/ (admin/admin).
 
-### Tests
+### Tests + checks (same scripts run locally and in CI)
 ```bash
-npm test             # PHP unit-style tests (host or container)
-lando ssh -s appserver -c 'cd /app && npm test'   # same tests, in the container
+npm run lint         # php -l on src/+tests/, node --check on sidecar/*.mjs
+npm test             # PHP unit-style tests (host-side, fast)
+npm run check:pcp    # Plugin Check via Lando — requires `lando start` first
+npm run check        # everything (lint + test + check:pcp)
 ```
+CI runs the exact same scripts. The `lint-and-test` job runs `npm run lint && npm test` (no Lando, fast). The `pcp` job boots Lando and runs `npm run check:pcp`. There are no CI-only assertions — if you can run `npm run check` locally, you have the same gate CI runs.
 
 ### Deploy plugin code changes into the running WP
 ```bash
@@ -82,7 +85,7 @@ No implementation without a test. No refactoring without green tests.
 ### GitHub Actions Rules
 
 - **Pin `procyon-creative/jira-action-man` to a specific stable tag** (currently `v1.0.0`; no moving `v1` major tag is published). Re-check on each `/jira-setup` run.
-- **`.github/workflows/ci.yml`** runs on every PR + push to `main`. It runs unit tests + lint, then boots Lando via `lando/setup-lando@v3` and verifies the dry plugin list + active theme + plugin activation. Same `npm test` runs locally and in CI.
+- **`.github/workflows/ci.yml`** runs on every PR + push to `main`. Two jobs: `lint-and-test` (runs `npm run lint && npm test` — no Lando) and `pcp` (boots Lando via `lando/setup-lando@v3` and runs `npm run check:pcp`). Both invoke the exact same npm scripts you run locally; there are no CI-only assertions.
 - **`.github/workflows/jira.yml`** syncs ticket metadata to PRs and transitions tickets to `Done` on merge. See [docs/jira.md](docs/jira.md) for required secrets and board-column notes.
 - **`.github/workflows/main.yml`** builds the release zip and attaches it to the GitHub release on tag push (`v*`).
 
