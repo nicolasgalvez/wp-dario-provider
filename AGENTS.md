@@ -11,7 +11,7 @@ procyon-dario-provider.php              Entry point: autoloader, autoupdates, pr
 src/
   autoload.php                     PSR-4 autoloader for Dario\ namespace
   Provider/DarioProvider.php       Extends AbstractApiProvider (from wordpress/php-ai-client)
-  Metadata/DarioModelMetadataDirectory.php  Curated model list (Dario has no /v1/models endpoint)
+  Metadata/DarioModelMetadataDirectory.php  Curated model list (see "Things an Agent Might Get Wrong")
   Models/DarioTextGenerationModel.php       OpenAI-compatible /v1/chat/completions implementation
 assets/images/dario.svg            Provider icon
 vendor/                            Composer deps (plugin-update-checker)
@@ -122,5 +122,5 @@ Secret fields render as empty `password` inputs with `placeholder="*****"` whene
 - **This is not a block/frontend plugin.** It has a Node sidecar runtime for Dario, but no `wp-scripts build` and no blocks.
 - **The AI Client is bundled in WordPress 7.0+.** Do not install `wordpress/php-ai-client` as a Composer dependency — it will conflict with Core's bundled version.
 - **Dario base URL is configurable.** Check `DARIO_BASE_URL` constant or env var before assuming `localhost:3456`.
-- **Model list is hardcoded.** Dario doesn't expose a `/v1/models` endpoint, so models are curated in `DarioModelMetadataDirectory::DEFAULT_MODELS`.
+- **Model list is curated, not fetched.** Dario does expose `/v1/models` now, but it only returns the Claude models its native subscription backend supports — GPT models pass through Dario's OpenAI-compat backend on demand. The hardcoded list in `DarioModelMetadataDirectory::DEFAULT_MODELS` always exposes both Claude AND GPT model IDs to consumers regardless of which backends the admin has configured. If we ever switch to dynamic fetching, GPT models would disappear from the picker until the admin runs `dario backend add openai` and the connector reads back the augmented list.
 - **Custom autoloader, not Composer's.** The `src/autoload.php` handles PSR-4 for the `Dario\` namespace. Composer's autoloader only handles `vendor/` dependencies.
