@@ -73,6 +73,11 @@ if ( ! function_exists( 'wp_mkdir_p' ) ) {
 		return false;
 	}
 }
+if ( ! function_exists( 'wp_json_encode' ) ) {
+	function wp_json_encode( $data, $options = 0, $depth = 512 ) {
+		return json_encode( $data, $options, $depth );
+	}
+}
 
 // Several src/ files call function_exists() before update_option/get_option/
 // set_transient/etc. so they work fine without stubs in unit tests.
