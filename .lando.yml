@@ -23,7 +23,7 @@ services:
           # --skip-content omits the bundled wp-content/plugins (Akismet, Hello Dolly)
           # and wp-content/themes (Twenty*). Keeps the install minimal and reproducible.
           wp core download --version=7.0-RC4 --path="$WP_DIR" --skip-content --allow-root
-          echo "WordPress 7.0 RC4 extracted (no default themes/plugins)."
+          echo "WordPress 7.0 RC4 extracted."
         fi
     build:
       - |
@@ -39,6 +39,44 @@ services:
         cp /app/package.json "$PLUGIN_DIR/" 2>/dev/null || true
         cp /app/package-lock.json "$PLUGIN_DIR/" 2>/dev/null || true
         cp /app/readme.txt "$PLUGIN_DIR/" 2>/dev/null || true
+    run:
+      # Idempotent WP setup: configures, installs core, installs the latest
+      # default theme, and activates this plugin. Runs on every `lando start`
+      # and `lando rebuild`. Skips work that's already done so subsequent
+      # starts are fast. The Lando MariaDB recipe pre-creates the `wordpress`
+      # database, so we skip `wp db create` (which also dies on TLS/SSL with
+      # the default mariadb client config).
+      - |
+        set -e
+        cd /app/wordpress
+        if [ ! -f wp-config.php ]; then
+          echo "Generating wp-config.php..."
+          wp config create \
+            --dbname=wordpress \
+            --dbuser=wordpress \
+            --dbpass=wordpress \
+            --dbhost=database \
+            --skip-check \
+            --force
+        fi
+        if ! wp core is-installed --quiet 2>/dev/null; then
+          echo "Installing WordPress core..."
+          wp core install \
+            --url=http://wp-dario-test.lndo.site \
+            --title="Dario Test" \
+            --admin_user=admin \
+            --admin_password=admin \
+            --admin_email=admin@example.com \
+            --skip-email
+          echo "WordPress installed: http://wp-dario-test.lndo.site/wp-admin (admin/admin)"
+        fi
+        if ! wp theme list --field=name 2>/dev/null | grep -q .; then
+          echo "Installing default theme (twentytwentyfive)..."
+          wp theme install twentytwentyfive --activate
+        fi
+        if ! wp plugin is-active wp-dario-provider 2>/dev/null; then
+          wp plugin activate wp-dario-provider
+        fi
     overrides:
       environment:
         WP_DB_HOST: database
@@ -67,18 +105,9 @@ tooling:
   wp:
     service: appserver
     cmd: wp --path=/app/wordpress
-  setup:
-    service: appserver
-    description: Run WP installation (DB + admin user)
-    cmd:
-      - wp config create --dbname=wordpress --dbuser=wordpress --dbpass=wordpress --dbhost=database --path=/app/wordpress --force
-      - wp db create --path=/app/wordpress
-      - wp core install --url=http://wp-dario-test.lndo.site --title="Dario Test" --admin_user=admin --admin_password=admin --admin_email=admin@example.com --path=/app/wordpress
-      - wp plugin activate wp-dario-provider --path=/app/wordpress
-      - echo "WordPress installed. Login: http://wp-dario-test.lndo.site/wp-admin (admin/admin)"
   deploy-plugin:
     service: appserver
-    description: Copy plugin files into WP plugins dir
+    description: Copy plugin files into WP plugins dir (use after editing src/)
     cmd:
       - |
         PLUGIN_DIR=/app/wordpress/wp-content/plugins/wp-dario-provider
