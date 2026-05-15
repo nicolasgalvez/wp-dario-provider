@@ -11,7 +11,7 @@ Connects WordPress to AI models via the [Dario](https://github.com/askalf/dario)
 
 ## Installation
 
-1. Download the latest release zip from [GitHub Releases](https://github.com/nicolasgalvez/wp-dario-provider/releases)
+1. Download the latest release zip from [GitHub Releases](https://github.com/procyon-creative/wp-dario-provider/releases)
 2. Upload to `/wp-content/plugins/wp-dario-provider/` or install via the WordPress plugins screen
 3. Activate the plugin
 4. Configure your Dario API key in **Settings > Connectors**

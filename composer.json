@@ -1,5 +1,5 @@
 {
-    "name": "nicolasgalvez/wp-dario-provider",
+    "name": "procyon-creative/wp-dario-provider",
     "description": "AI Provider for Dario local LLM router for the WordPress AI Client.",
     "license": "GPL-2.0-or-later",
     "keywords": [
@@ -9,10 +9,10 @@
         "llm",
         "connector"
     ],
-    "homepage": "https://github.com/nicolasgalvez/wp-dario-provider",
+    "homepage": "https://github.com/procyon-creative/wp-dario-provider",
     "support": {
-        "issues": "https://github.com/nicolasgalvez/wp-dario-provider/issues",
-        "source": "https://github.com/nicolasgalvez/wp-dario-provider"
+        "issues": "https://github.com/procyon-creative/wp-dario-provider/issues",
+        "source": "https://github.com/procyon-creative/wp-dario-provider"
     },
     "require": {
         "php": ">=7.4",
