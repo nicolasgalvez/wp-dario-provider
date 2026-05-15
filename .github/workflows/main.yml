@@ -1,0 +1,46 @@
+name: Build and Zip WordPress Plugin
+env:
+  PLUGIN_NAME: wp-dario-provider
+on:
+  release:
+    types: [published]
+  push:
+    tags:
+      - 'v*'
+    branches:
+      - 'test'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+
+      - name: Install Composer dependencies
+        run: composer install --no-dev --optimize-autoloader
+
+      - name: Create plugin zip
+        run: |
+          mkdir -p /tmp/$PLUGIN_NAME
+          cp -r src/ /tmp/$PLUGIN_NAME/src/
+          cp -r assets/ /tmp/$PLUGIN_NAME/assets/
+          cp vendor/ /tmp/$PLUGIN_NAME/vendor/ 2>/dev/null || true
+          cp wp-dario-provider.php /tmp/$PLUGIN_NAME/
+          cp plugin.json /tmp/$PLUGIN_NAME/
+          cp readme.txt /tmp/$PLUGIN_NAME/
+          cp LICENSE /tmp/$PLUGIN_NAME/ 2>/dev/null || true
+          cd /tmp
+          zip -r $GITHUB_WORKSPACE/$PLUGIN_NAME.zip $PLUGIN_NAME/
+
+      - name: Upload Release Asset
+        if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'release'
+        run: gh release upload ${{ github.ref_name }} ./$PLUGIN_NAME.zip
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

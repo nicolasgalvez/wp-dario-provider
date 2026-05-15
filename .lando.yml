@@ -1,0 +1,84 @@
+name: wp-dario-test
+recipe: lamp
+
+config:
+  php: '8.3'
+  webroot: wordpress
+  database: mariadb
+
+services:
+  appserver:
+    type: php:8.3
+    build_as_root:
+      - apt-get update -qq && apt-get install -y -qq unzip curl default-mysql-client > /dev/null 2>&1
+      - |
+        WP_DIR=/app/wordpress
+        if [ ! -f "$WP_DIR/wp-load.php" ]; then
+          echo "Downloading WordPress 7.0 RC4..."
+          curl -sSfo /tmp/wordpress.zip https://wordpress.org/wordpress-7.0-RC4.zip
+          unzip -qo /tmp/wordpress.zip -d /app/
+          rm /tmp/wordpress.zip
+          echo "WordPress 7.0 RC4 extracted."
+        fi
+    build:
+      - |
+        PLUGIN_DIR=/app/wordpress/wp-content/plugins/wp-dario-provider
+        mkdir -p "$PLUGIN_DIR"
+        cp -r /app/src/ "$PLUGIN_DIR/src/" 2>/dev/null || true
+        cp -r /app/assets/ "$PLUGIN_DIR/assets/" 2>/dev/null || true
+        cp -r /app/vendor/ "$PLUGIN_DIR/vendor/" 2>/dev/null || true
+        cp /app/wp-dario-provider.php "$PLUGIN_DIR/" 2>/dev/null || true
+        cp /app/plugin.json "$PLUGIN_DIR/" 2>/dev/null || true
+        cp /app/readme.txt "$PLUGIN_DIR/" 2>/dev/null || true
+    overrides:
+      environment:
+        WP_DB_HOST: database
+        WP_DB_NAME: wordpress
+        WP_DB_USER: wordpress
+        WP_DB_PASSWORD: wordpress
+        DARIO_BASE_URL: http://host.docker.internal:3456/v1
+
+  database:
+    type: mariadb:10.6
+    creds:
+      user: wordpress
+      password: wordpress
+      database: wordpress
+
+  pma:
+    type: phpmyadmin
+    hosts:
+      - database
+
+proxy:
+  pma:
+    - pma-wp-dario-test.lndo.site
+
+tooling:
+  wp:
+    service: appserver
+    cmd: wp --path=/app/wordpress
+  setup:
+    service: appserver
+    description: Run WP installation (DB + admin user)
+    cmd:
+      - wp config create --dbname=wordpress --dbuser=wordpress --dbpass=wordpress --dbhost=database --path=/app/wordpress --force
+      - wp db create --path=/app/wordpress
+      - wp core install --url=http://wp-dario-test.lndo.site --title="Dario Test" --admin_user=admin --admin_password=admin --admin_email=admin@example.com --path=/app/wordpress
+      - wp plugin activate wp-dario-provider --path=/app/wordpress
+      - echo "WordPress installed. Login: http://wp-dario-test.lndo.site/wp-admin (admin/admin)"
+  deploy-plugin:
+    service: appserver
+    description: Copy plugin files into WP plugins dir
+    cmd:
+      - |
+        PLUGIN_DIR=/app/wordpress/wp-content/plugins/wp-dario-provider
+        rm -rf "$PLUGIN_DIR"
+        mkdir -p "$PLUGIN_DIR"
+        cp -r /app/src/ "$PLUGIN_DIR/src/"
+        cp -r /app/assets/ "$PLUGIN_DIR/assets/"
+        cp -r /app/vendor/ "$PLUGIN_DIR/vendor/"
+        cp /app/wp-dario-provider.php "$PLUGIN_DIR/"
+        cp /app/plugin.json "$PLUGIN_DIR/"
+        cp /app/readme.txt "$PLUGIN_DIR/"
+        echo "Plugin deployed."

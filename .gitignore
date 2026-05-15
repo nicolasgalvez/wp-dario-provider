@@ -1,0 +1,21 @@
+# Dependency directories
+node_modules/
+/vendor/
+
+# Build output
+*.zip
+*.tgz
+
+# Lando
+.wordpress/
+wordpress/
+.lando.local.yml
+
+# dotenv
+.env
+
+# IDE
+.idea/
+
+# OS
+.DS_Store
