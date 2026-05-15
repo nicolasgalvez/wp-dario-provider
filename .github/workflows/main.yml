@@ -1,6 +1,9 @@
 name: Build and Zip WordPress Plugin
 env:
   PLUGIN_NAME: procyon-dario-provider
+  # In case any action used here still ships Node 20 internally, force them
+  # under Node 24 (Node 20 is removed from runners on 2026-09-16).
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
 permissions:
   contents: write
 on:
@@ -18,7 +21,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
