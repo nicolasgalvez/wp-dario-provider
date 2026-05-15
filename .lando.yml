@@ -30,19 +30,24 @@ services:
         # default through volume permissions; on Linux runners (GHA) it doesn't.
         chown -R www-data:www-data "$WP_DIR/wp-content" || true
     build:
+      # Use rsync --delete to keep the deployed plugin dir in sync with the
+      # source tree. Idempotent: avoids the cp -r src/ -> dest/src/src/
+      # nesting bug that occurs when the destination dir already exists,
+      # and removes files that no longer exist in the source.
       - |
         PLUGIN_DIR=/app/wordpress/wp-content/plugins/wp-dario-provider
         mkdir -p "$PLUGIN_DIR"
-        cp -r /app/src/ "$PLUGIN_DIR/src/" 2>/dev/null || true
-        cp -r /app/sidecar/ "$PLUGIN_DIR/sidecar/" 2>/dev/null || true
-        cp -r /app/assets/ "$PLUGIN_DIR/assets/" 2>/dev/null || true
-        cp -r /app/vendor/ "$PLUGIN_DIR/vendor/" 2>/dev/null || true
-        cp -r /app/node_modules/ "$PLUGIN_DIR/node_modules/" 2>/dev/null || true
-        cp /app/wp-dario-provider.php "$PLUGIN_DIR/" 2>/dev/null || true
-        cp /app/plugin.json "$PLUGIN_DIR/" 2>/dev/null || true
-        cp /app/package.json "$PLUGIN_DIR/" 2>/dev/null || true
-        cp /app/package-lock.json "$PLUGIN_DIR/" 2>/dev/null || true
-        cp /app/readme.txt "$PLUGIN_DIR/" 2>/dev/null || true
+        rsync -a --delete /app/src/ "$PLUGIN_DIR/src/"
+        rsync -a --delete /app/sidecar/ "$PLUGIN_DIR/sidecar/"
+        rsync -a --delete /app/assets/ "$PLUGIN_DIR/assets/"
+        rsync -a --delete /app/vendor/ "$PLUGIN_DIR/vendor/" 2>/dev/null || true
+        rsync -a --delete /app/node_modules/ "$PLUGIN_DIR/node_modules/" 2>/dev/null || true
+        cp /app/wp-dario-provider.php "$PLUGIN_DIR/"
+        cp /app/plugin.json "$PLUGIN_DIR/"
+        cp /app/package.json "$PLUGIN_DIR/"
+        cp /app/package-lock.json "$PLUGIN_DIR/"
+        cp /app/readme.txt "$PLUGIN_DIR/"
+        cp /app/composer.json "$PLUGIN_DIR/" 2>/dev/null || true
     run:
       # Idempotent WP setup: configures, installs core, installs the latest
       # default theme, and activates this plugin. Runs on every `lando start`
@@ -115,18 +120,18 @@ tooling:
     cmd:
       - |
         PLUGIN_DIR=/app/wordpress/wp-content/plugins/wp-dario-provider
-        rm -rf "$PLUGIN_DIR"
         mkdir -p "$PLUGIN_DIR"
-        cp -r /app/src/ "$PLUGIN_DIR/src/"
-        cp -r /app/sidecar/ "$PLUGIN_DIR/sidecar/"
-        cp -r /app/assets/ "$PLUGIN_DIR/assets/"
-        cp -r /app/vendor/ "$PLUGIN_DIR/vendor/"
-        cp -r /app/node_modules/ "$PLUGIN_DIR/node_modules/"
+        rsync -a --delete /app/src/ "$PLUGIN_DIR/src/"
+        rsync -a --delete /app/sidecar/ "$PLUGIN_DIR/sidecar/"
+        rsync -a --delete /app/assets/ "$PLUGIN_DIR/assets/"
+        rsync -a --delete /app/vendor/ "$PLUGIN_DIR/vendor/"
+        rsync -a --delete /app/node_modules/ "$PLUGIN_DIR/node_modules/"
         cp /app/wp-dario-provider.php "$PLUGIN_DIR/"
         cp /app/plugin.json "$PLUGIN_DIR/"
         cp /app/package.json "$PLUGIN_DIR/"
         cp /app/package-lock.json "$PLUGIN_DIR/"
         cp /app/readme.txt "$PLUGIN_DIR/"
+        cp /app/composer.json "$PLUGIN_DIR/"
         echo "Plugin deployed."
   dario:
     service: appserver

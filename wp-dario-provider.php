@@ -44,13 +44,13 @@ if ( is_admin() ) {
 	DarioSettingsPage::bootstrap( __FILE__ );
 }
 
-$my_update_checker = PucFactory::buildUpdateChecker(
+$dario_update_checker = PucFactory::buildUpdateChecker(
 	'https://github.com/nicolasgalvez/wp-dario-provider/',
 	__FILE__,
 	'wp-dario-provider'
 );
-$my_update_checker->getVcsApi()->enableReleaseAssets();
-$my_update_checker->setBranch( 'main' );
+$dario_update_checker->getVcsApi()->enableReleaseAssets();
+$dario_update_checker->setBranch( 'main' );
 
 function register_provider(): void {
 	if ( ! class_exists( 'WordPress\AiClient\AiClient' ) ) {

@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace Dario\Sidecar;
 
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 use Dario\Admin\DarioSettings;
 
 /**

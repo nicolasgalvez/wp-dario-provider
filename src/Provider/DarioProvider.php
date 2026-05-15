@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace Dario\Provider;
 
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 use WordPress\AiClient\Common\Exception\RuntimeException;
 use WordPress\AiClient\Providers\ApiBasedImplementation\AbstractApiProvider;
 use WordPress\AiClient\Providers\ApiBasedImplementation\ListModelsApiBasedProviderAvailability;
@@ -81,7 +85,7 @@ class DarioProvider extends AbstractApiProvider {
 		}
 
 		throw new RuntimeException(
-			'Unsupported model capabilities: ' . implode( ', ', $capabilities )
+			esc_html( 'Unsupported model capabilities: ' . implode( ', ', $capabilities ) )
 		);
 	}
 

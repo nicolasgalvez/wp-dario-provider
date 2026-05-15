@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace Dario\Metadata;
 
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 use WordPress\AiClient\Providers\Contracts\ModelMetadataDirectoryInterface;
 use WordPress\AiClient\Common\Exception\InvalidArgumentException;
 use WordPress\AiClient\Providers\Models\DTO\ModelMetadata;
@@ -124,7 +128,7 @@ class DarioModelMetadataDirectory implements ModelMetadataDirectoryInterface {
 		}
 
 		throw new InvalidArgumentException(
-			sprintf( 'No model with ID %s was found in the provider', $model_id )
+			esc_html( sprintf( 'No model with ID %s was found in the provider', $model_id ) )
 		);
 	}
 
