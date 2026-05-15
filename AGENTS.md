@@ -9,7 +9,7 @@ A WordPress 7.0 plugin that registers [Dario](https://github.com/askalf/dario) a
 ```
 procyon-dario-provider.php              Entry point: autoloader, autoupdates, provider registration on init
 src/
-  autoload.php                     PSR-4 autoloader for Dario\ namespace
+  autoload.php                     PSR-4 autoloader for Procyon\Dario\ namespace
   Provider/DarioProvider.php       Extends AbstractApiProvider (from wordpress/php-ai-client)
   Metadata/DarioModelMetadataDirectory.php  Curated model list (see "Things an Agent Might Get Wrong")
   Models/DarioTextGenerationModel.php       OpenAI-compatible /v1/chat/completions implementation
@@ -20,8 +20,8 @@ vendor/                            Composer deps (plugin-update-checker)
 ## Key Conventions
 
 - **Indent style**: tabs (WordPress coding standards, enforced in `.editorconfig`)
-- **PHP**: 7.4+ compatible, strict types declared
-- **Namespace**: `Dario\` (PSR-4, loaded via custom autoloader — not Composer's)
+- **PHP**: 8.0+ (declared in plugin header `Requires PHP: 8.0`; the code uses `match` expressions)
+- **Namespace**: `Procyon\Dario\` (PSR-4, loaded via custom autoloader — not Composer's)
 - **WordPress AI Client interfaces**: `AbstractApiProvider`, `AbstractApiBasedModel`, `ModelMetadataDirectoryInterface`
 - **No frontend build step**: PHP plugin with a Node sidecar script for Dario; no JS/CSS compilation
 
@@ -89,18 +89,25 @@ No implementation without a test. No refactoring without green tests.
 - **`.github/workflows/ci.yml`** runs on every PR + push to `main`. Single job that runs the same `npm run check` a developer runs locally: lint → unit tests → Lando boot → Plugin Check. No CI-only assertions; if `npm run check` passes locally, this passes.
 - **Branch protection on `main`** requires the `npm run check` status check to pass before a PR can merge. Force-push and branch deletion are disabled. Re-apply via `gh api -X PUT --input docs/branch-protection.json repos/procyon-creative/wp-dario-provider/branches/main/protection` if it ever gets cleared.
 - **`.github/workflows/jira.yml`** syncs ticket metadata to PRs and transitions tickets to `Done` on merge. See [docs/jira.md](docs/jira.md) for required secrets and board-column notes.
-- **`.github/workflows/main.yml`** builds the release zip and attaches it to the GitHub release on tag push (`v*`).
+- **`.github/workflows/main.yml`** builds the release zip and attaches it to the GitHub release on `release: published` (and on `push: branches test` for workflow testing). The previous `push: tags v*` trigger was removed (WPD-28) because it raced `gh release create`.
 
 ## Version Release Process
 
-Three places must have matching version bumps:
-1. `readme.txt` — stable tag
+Four places must have matching version bumps:
+1. `readme.txt` — stable tag + `= 0.x.y =` Changelog header
 2. `plugin.json` — version field
-3. `procyon-dario-provider.php` — header comment version
+3. `package.json` — version field
+4. `procyon-dario-provider.php` — header comment `Version:` line
 
-Then tag + push: `git tag v0.1.x -m "message" && git push origin v0.1.x`
+Then tag + create the release in one shot:
 
-The GitHub Actions workflow builds the zip and attaches it to the release automatically. Releases live at https://github.com/procyon-creative/wp-dario-provider/releases.
+```bash
+git tag v0.2.x
+git push origin v0.2.x
+gh release create v0.2.x --title "v0.2.x" --notes "..."
+```
+
+`gh release create` fires `release: published`, which runs `.github/workflows/main.yml` and uploads `procyon-dario-provider.zip` to the release. Don't rely on `push: tags` to do the build — that trigger was removed (WPD-28). Releases live at https://github.com/procyon-creative/wp-dario-provider/releases.
 
 ## Issue Tracking
 
@@ -121,6 +128,6 @@ Secret fields render as empty `password` inputs with `placeholder="*****"` whene
 
 - **This is not a block/frontend plugin.** It has a Node sidecar runtime for Dario, but no `wp-scripts build` and no blocks.
 - **The AI Client is bundled in WordPress 7.0+.** Do not install `wordpress/php-ai-client` as a Composer dependency — it will conflict with Core's bundled version.
-- **Dario base URL is configurable.** Check `DARIO_BASE_URL` constant or env var before assuming `localhost:3456`.
+- **Dario base URL is configurable.** Check `DARIO_BASE_URL` constant or env var before assuming `localhost:3456`. When you change how the base URL resolves, also update `DarioSidecar::allowedHostPort()` — that's what feeds the `http_request_host_is_external` and `http_allowed_safe_ports` filters. Without a matching whitelist, `wp_safe_remote_request` blocks the call (WPD-27).
 - **Model list is curated, not fetched.** Dario does expose `/v1/models` now, but it only returns the Claude models its native subscription backend supports — GPT models pass through Dario's OpenAI-compat backend on demand. The hardcoded list in `DarioModelMetadataDirectory::DEFAULT_MODELS` always exposes both Claude AND GPT model IDs to consumers regardless of which backends the admin has configured. If we ever switch to dynamic fetching, GPT models would disappear from the picker until the admin runs `dario backend add openai` and the connector reads back the augmented list.
-- **Custom autoloader, not Composer's.** The `src/autoload.php` handles PSR-4 for the `Dario\` namespace. Composer's autoloader only handles `vendor/` dependencies.
+- **Custom autoloader, not Composer's.** The `src/autoload.php` handles PSR-4 for the `Procyon\Dario\` namespace. Composer's autoloader only handles `vendor/` dependencies.
