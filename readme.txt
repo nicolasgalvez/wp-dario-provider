@@ -2,7 +2,7 @@
 Contributors:      nicolasgalvez
 Tags:              ai, llm, connector, openai, claude
 Tested up to:      7.0
-Stable tag:        0.2.1
+Stable tag:        0.2.2
 License:           GPL-2.0-or-later
 License URI:       https://spdx.org/licenses/GPL-2.0-or-later.html
 
@@ -50,6 +50,15 @@ To upgrade:
 Your Dario credentials at `~/.dario/credentials.json` and OpenAI backend files at `~/.dario/backends/*.json` are unaffected.
 
 == Changelog ==
+
+= 0.2.2 =
+* Admin notice now also fires when the Dario sidecar is down (not just when Claude OAuth is missing). Consumers were failing silently on `connection refused` (WPD-20).
+* Add PHPStan static analysis at level 5 with WP stubs to CI. Surfaced and fixed: dead defensive isset() checks, an unreachable version_compare, an isset() on a non-nullable WP_Screen property, a PUC method-on-trait narrowing miss (WPD-17).
+* Bump declared minimum PHP from 7.4 to 8.0 — the code already used `match`, so 7.4 installs would have crashed.
+* Extract `MigrationShim` to its own class and add unit tests covering the four 0.1.x → 0.2.0 option migration scenarios (WPD-18).
+* Add unit tests for the sidecar start-command construction (DARIO_API_KEY conditional, host/port flow-through) and connector-key sync logic (WPD-21).
+* Add unit tests for the WPD-1 secret-preservation rule on empty form submit (WPD-22).
+* Pre-commit hook now also lints staged `.mjs` and `.yml` files (WPD-19).
 
 = 0.2.1 =
 * Bump GitHub Actions to Node 24 (`actions/checkout@v6`, `setup-node@v6`) before the September 2026 Node 20 removal (WPD-9).
