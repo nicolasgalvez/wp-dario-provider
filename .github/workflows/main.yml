@@ -7,11 +7,13 @@ env:
 permissions:
   contents: write
 on:
+  # Only build on release publish. Previously this also fired on `push: tags v*`,
+  # which races: pushing the tag before `gh release create` runs the workflow
+  # against a release that doesn't exist yet, and the upload step fails. The
+  # release-published event handles both tag and release in one shot.
   release:
     types: [published]
   push:
-    tags:
-      - 'v*'
     branches:
       - 'test'
 
@@ -54,7 +56,7 @@ jobs:
           zip -r $GITHUB_WORKSPACE/$PLUGIN_NAME.zip $PLUGIN_NAME/
 
       - name: Upload Release Asset
-        if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'release'
-        run: gh release upload ${{ github.ref_name }} ./$PLUGIN_NAME.zip --clobber
+        if: github.event_name == 'release'
+        run: gh release upload ${{ github.event.release.tag_name }} ./$PLUGIN_NAME.zip --clobber
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
