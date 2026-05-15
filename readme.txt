@@ -2,7 +2,7 @@
 Contributors:      nicolasgalvez
 Tags:              ai, dario, llm, connector, openai, claude
 Tested up to:      7.0
-Stable tag:        0.1.1
+Stable tag:        0.1.2
 License:           GPL-2.0-or-later
 License URI:       https://spdx.org/licenses/GPL-2.0-or-later.html
 
@@ -35,6 +35,9 @@ This plugin registers [Dario](https://github.com/askalf/dario) as an AI provider
 1. Configure your Dario API key in Settings > Connectors.
 
 == Changelog ==
+
+= 0.1.2 =
+* Fix GitHub Actions release asset upload permissions.
 
 = 0.1.1 =
 * Fix compatibility with the WordPress 7.0 RC4 AI Client model metadata directory interface.
