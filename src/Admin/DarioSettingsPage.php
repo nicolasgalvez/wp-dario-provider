@@ -91,10 +91,15 @@ class DarioSettingsPage {
 	}
 
 	/**
-	 * Site-wide admin notice when Claude is not authenticated. Suppressed on
-	 * the settings page itself (the page already shows full status) and
-	 * cached in a transient so we don't shell out to the helper script on
-	 * every admin page load.
+	 * Site-wide admin notice when the Dario provider isn't ready to serve
+	 * requests. Two failure modes are surfaced:
+	 *   1. Claude OAuth missing or invalid (consumer requests will 401).
+	 *   2. Sidecar process not listening on the proxy port (consumer
+	 *      requests will fail with "connection refused").
+	 *
+	 * Suppressed on the settings page itself (it already shows full status)
+	 * and cached in a transient so we don't shell out + open a TCP socket
+	 * on every admin page load.
 	 */
 	public function renderAuthNotice(): void {
 		if ( ! current_user_can( 'manage_options' ) ) {
@@ -105,26 +110,55 @@ class DarioSettingsPage {
 			return;
 		}
 
-		$claude = get_transient( self::AUTH_NOTICE_TRANSIENT );
-		if ( ! is_array( $claude ) ) {
-			$claude = DarioClaudeAuth::status( dirname( $this->plugin_file ) );
-			set_transient( self::AUTH_NOTICE_TRANSIENT, $claude, self::AUTH_NOTICE_TTL );
+		$cached = get_transient( self::AUTH_NOTICE_TRANSIENT );
+		if ( ! is_array( $cached ) ) {
+			$plugin_dir = dirname( $this->plugin_file );
+			$cached = [
+				'claude'  => DarioClaudeAuth::status( $plugin_dir ),
+				'sidecar' => DarioSidecar::status( $plugin_dir ),
+			];
+			set_transient( self::AUTH_NOTICE_TRANSIENT, $cached, self::AUTH_NOTICE_TTL );
+		}
+		$claude  = $cached['claude'] ?? [];
+		$sidecar = $cached['sidecar'] ?? [];
+
+		$messages = [];
+		if ( empty( $claude['authenticated'] ) ) {
+			$status     = (string) ( $claude['status'] ?? 'none' );
+			$is_warning = in_array( $status, [ 'expiring', 'broken' ], true ) || ! empty( $claude['hasCredentials'] );
+			$messages[] = [
+				'severity' => $is_warning ? 'warning' : 'error',
+				'text'     => $is_warning
+					? __( 'Claude credentials are present but not currently valid. The AI provider will not work until you re-authenticate.', 'procyon-dario-provider' )
+					: __( 'Claude is not authenticated. The AI provider will not work until you log in.', 'procyon-dario-provider' ),
+			];
+		}
+		if ( empty( $sidecar['sidecar_running'] ) ) {
+			$messages[] = [
+				'severity' => 'error',
+				'text'     => __( 'The Dario sidecar is not running. The AI provider cannot reach the proxy port. Restart the sidecar from the settings page.', 'procyon-dario-provider' ),
+			];
 		}
 
-		if ( ! empty( $claude['authenticated'] ) ) {
+		if ( empty( $messages ) ) {
 			return;
 		}
 
-		$status      = (string) ( $claude['status'] ?? 'none' );
-		$is_warning  = in_array( $status, [ 'expiring', 'broken' ], true ) || ! empty( $claude['hasCredentials'] );
-		$class       = $is_warning ? 'notice notice-warning' : 'notice notice-error';
-		$message     = $is_warning
-			? __( 'Dario AI Connector: Claude credentials are present but not currently valid. The AI provider will not work until you re-authenticate.', 'procyon-dario-provider' )
-			: __( 'Dario AI Connector: Claude is not authenticated. The AI provider will not work until you log in.', 'procyon-dario-provider' );
-		$url         = admin_url( 'options-general.php?page=' . self::MENU_SLUG );
+		$url = admin_url( 'options-general.php?page=' . self::MENU_SLUG );
+		// Pick the most severe class for the combined notice.
+		$class = 'notice notice-warning';
+		foreach ( $messages as $msg ) {
+			if ( $msg['severity'] === 'error' ) {
+				$class = 'notice notice-error';
+				break;
+			}
+		}
 
-		echo '<div class="' . esc_attr( $class ) . '"><p><strong>' . esc_html( $message ) . '</strong> ';
-		echo '<a href="' . esc_url( $url ) . '">' . esc_html__( 'Configure now →', 'procyon-dario-provider' ) . '</a></p></div>';
+		echo '<div class="' . esc_attr( $class ) . '"><p><strong>' . esc_html__( 'Dario AI Connector', 'procyon-dario-provider' ) . ':</strong></p><ul style="margin:0 0 0 1.5em;list-style:disc;">';
+		foreach ( $messages as $msg ) {
+			echo '<li>' . esc_html( $msg['text'] ) . '</li>';
+		}
+		echo '</ul><p><a href="' . esc_url( $url ) . '">' . esc_html__( 'Configure now →', 'procyon-dario-provider' ) . '</a></p></div>';
 	}
 
 	private function renderStatusSection( array $status, array $claude ): void {
