@@ -15,7 +15,7 @@
         "source": "https://github.com/procyon-creative/wp-dario-provider"
     },
     "require": {
-        "php": ">=7.4",
+        "php": ">=8.0",
         "yahnis-elsts/plugin-update-checker": "^5.2"
     },
     "minimum-stability": "stable",
@@ -23,9 +23,13 @@
     "config": {
         "optimize-autoloader": true,
         "platform": {
-            "php": "7.4"
+            "php": "8.0"
         },
         "sort-packages": true,
         "allow-plugins": {}
+    },
+    "require-dev": {
+        "phpstan/phpstan": "^2.1",
+        "szepeviktor/phpstan-wordpress": "^2.0"
     }
 }

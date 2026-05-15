@@ -42,11 +42,12 @@ On first run this downloads WP 7.0 RC4 (without bundled themes/plugins via `wp c
 ### Tests + checks (same scripts run locally and in CI)
 ```bash
 npm run lint         # php -l on src/+tests/, node --check on sidecar/*.mjs
+npm run analyze      # PHPStan static analysis (level 5, WP stubs)
 npm test             # PHP unit-style tests (host-side, fast)
 npm run check:pcp    # Plugin Check via Lando — requires `lando start` first
-npm run check        # everything (lint + test + check:pcp)
+npm run check        # everything (lint + analyze + test + check:pcp)
 ```
-CI runs the exact same scripts. The `lint-and-test` job runs `npm run lint && npm test` (no Lando, fast). The `pcp` job boots Lando and runs `npm run check:pcp`. There are no CI-only assertions — if you can run `npm run check` locally, you have the same gate CI runs.
+CI runs the exact same scripts in one sequential job (`npm run check`). No CI-only assertions — if you can run `npm run check` locally, you have the same gate CI runs.
 
 ### Deploy plugin code changes into the running WP
 ```bash
