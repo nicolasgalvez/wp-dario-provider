@@ -48,7 +48,8 @@ class DarioSidecar {
 		add_filter(
 			'http_request_host_is_external',
 			static function ( $external, $host ) {
-				return ( $host === self::host() ) ? true : $external;
+				$allowed = self::allowedHostPort();
+				return ( $host === $allowed['host'] ) ? true : $external;
 			},
 			10,
 			2
@@ -57,18 +58,48 @@ class DarioSidecar {
 		add_filter(
 			'http_allowed_safe_ports',
 			static function ( $ports, $host ) {
-				if ( $host !== self::host() ) {
+				$allowed = self::allowedHostPort();
+				if ( $host !== $allowed['host'] ) {
 					return $ports;
 				}
-				$port = self::port();
-				if ( is_array( $ports ) && ! in_array( $port, $ports, true ) ) {
-					$ports[] = $port;
+				if ( is_array( $ports ) && ! in_array( $allowed['port'], $ports, true ) ) {
+					$ports[] = $allowed['port'];
 				}
 				return $ports;
 			},
 			10,
 			2
 		);
+	}
+
+	/**
+	 * Resolve the host + port the AI Client will actually request, so the
+	 * HTTP filters whitelist that exact pair (not just the sidecar settings).
+	 *
+	 * Resolution order matches DarioProvider::baseUrl(): DARIO_BASE_URL
+	 * constant > DARIO_BASE_URL env > settings-derived host/port. If the
+	 * override is malformed, fall back to the sidecar settings rather than
+	 * silently leaving the filter wide open.
+	 *
+	 * @return array{host:string, port:int}
+	 */
+	public static function allowedHostPort(): array {
+		$override = null;
+		if ( defined( 'DARIO_BASE_URL' ) ) {
+			$override = (string) constant( 'DARIO_BASE_URL' );
+		} elseif ( false !== ( $env = getenv( 'DARIO_BASE_URL' ) ) ) {
+			$override = (string) $env;
+		}
+		if ( $override !== null && $override !== '' ) {
+			$parts = wp_parse_url( $override );
+			if ( is_array( $parts ) && ! empty( $parts['host'] ) ) {
+				return [
+					'host' => (string) $parts['host'],
+					'port' => isset( $parts['port'] ) ? (int) $parts['port'] : ( ( ( $parts['scheme'] ?? 'http' ) === 'https' ) ? 443 : 80 ),
+				];
+			}
+		}
+		return [ 'host' => self::host(), 'port' => self::port() ];
 	}
 
 	public static function host(): string {
