@@ -6,6 +6,13 @@ on:
   push:
     branches: [main]
 
+# lando/setup-lando is still pinned to Node 20 internally. GitHub's runners
+# remove Node 20 on 2026-09-16. Force any Node-20-bundled action to run
+# under Node 24 instead. Drop this env var when lando/setup-lando ships a
+# Node 24 release.
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+
 # Single job that runs the same `npm run check` a developer runs locally:
 #   npm run lint        php -l + node --check
 #   npm test            PHP unit tests
@@ -18,7 +25,7 @@ jobs:
     name: npm run check
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
@@ -26,7 +33,7 @@ jobs:
           php-version: '8.3'
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: '22'
 
