@@ -93,11 +93,10 @@ No implementation without a test. No refactoring without green tests.
 
 ## Version Release Process
 
-Four places must have matching version bumps:
+Three places must have matching version bumps:
 1. `readme.txt` — stable tag + `= 0.x.y =` Changelog header
-2. `plugin.json` — version field
-3. `package.json` — version field
-4. `procyon-dario-provider.php` — header comment `Version:` line
+2. `package.json` — version field
+3. `procyon-dario-provider.php` — header comment `Version:` line
 
 Then tag + create the release in one shot:
 

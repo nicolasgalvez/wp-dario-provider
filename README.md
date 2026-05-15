@@ -149,7 +149,7 @@ chore: bump dependencies
 
 ## Releases
 
-1. Bump version in `readme.txt`, `plugin.json`, `package.json`, `package-lock.json`, and `procyon-dario-provider.php`
+1. Bump version in `readme.txt`, `package.json`, `package-lock.json`, and `procyon-dario-provider.php`
 2. Tag and create the GitHub release: `gh release create v0.2.x --generate-notes`
 3. The release workflow builds the zip and attaches it as a release asset
 

@@ -19,3 +19,4 @@ wordpress/
 
 # OS
 .DS_Store
+.claude/

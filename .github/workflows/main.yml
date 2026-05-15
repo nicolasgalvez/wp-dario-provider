@@ -45,7 +45,6 @@ jobs:
           cp -r vendor/ /tmp/$PLUGIN_NAME/vendor/
           cp -r node_modules/ /tmp/$PLUGIN_NAME/node_modules/
           cp procyon-dario-provider.php /tmp/$PLUGIN_NAME/
-          cp plugin.json /tmp/$PLUGIN_NAME/
           cp package.json /tmp/$PLUGIN_NAME/
           cp package-lock.json /tmp/$PLUGIN_NAME/
           cp readme.txt /tmp/$PLUGIN_NAME/
