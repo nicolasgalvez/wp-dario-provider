@@ -2,7 +2,7 @@
 Contributors:      nicolasgalvez
 Tags:              ai, llm, connector, openai, claude
 Tested up to:      7.0
-Stable tag:        0.2.0
+Stable tag:        0.2.1
 License:           GPL-2.0-or-later
 License URI:       https://spdx.org/licenses/GPL-2.0-or-later.html
 
@@ -50,6 +50,14 @@ To upgrade:
 Your Dario credentials at `~/.dario/credentials.json` and OpenAI backend files at `~/.dario/backends/*.json` are unaffected.
 
 == Changelog ==
+
+= 0.2.1 =
+* Bump GitHub Actions to Node 24 (`actions/checkout@v6`, `setup-node@v6`) before the September 2026 Node 20 removal (WPD-9).
+* Single CI job that runs the same `npm run check` developers run locally; drop bespoke verification steps (WPD-10, WPD-11).
+* Branch protection on main requires the CI check to pass before merge (WPD-14).
+* PCP gate tightened: rename last unprefixed global, fail on any warning, not just errors (WPD-15).
+* Refresh composer.lock content-hash to silence the lock-out-of-date warning on every CI run (WPD-12).
+* Update README Development + Releases sections to match the current npm scripts (WPD-13).
 
 = 0.2.0 =
 * Rename plugin slug to `procyon-dario-provider`, namespace to `Procyon\Dario\`, text domain to `procyon-dario-provider`, options to `procyon_dario_*`, and provider ID to `procyon_dario`. Migration shim copies legacy options on activation.
