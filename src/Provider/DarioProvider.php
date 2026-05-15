@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Dario\Provider;
+namespace Procyon\Dario\Provider;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -18,9 +18,9 @@ use WordPress\AiClient\Providers\Enums\ProviderTypeEnum;
 use WordPress\AiClient\Providers\Http\Enums\RequestAuthenticationMethod;
 use WordPress\AiClient\Providers\Models\Contracts\ModelInterface;
 use WordPress\AiClient\Providers\Models\DTO\ModelMetadata;
-use Dario\Metadata\DarioModelMetadataDirectory;
-use Dario\Models\DarioTextGenerationModel;
-use Dario\Sidecar\DarioSidecar;
+use Procyon\Dario\Metadata\DarioModelMetadataDirectory;
+use Procyon\Dario\Models\DarioTextGenerationModel;
+use Procyon\Dario\Sidecar\DarioSidecar;
 
 /**
  * Dario AI provider.
@@ -98,7 +98,7 @@ class DarioProvider extends AbstractApiProvider {
 	 */
 	protected static function createProviderMetadata(): ProviderMetadata {
 		$provider_metadata_args = [
-			'dario',
+			'procyon_dario',
 			'Dario',
 			ProviderTypeEnum::cloud(),
 			'https://github.com/askalf/dario',
@@ -109,7 +109,7 @@ class DarioProvider extends AbstractApiProvider {
 		if ( class_exists( 'WordPress\AiClient\AiClient' ) && defined( 'WordPress\AiClient\AiClient::VERSION' ) ) {
 			if ( version_compare( \WordPress\AiClient\AiClient::VERSION, '1.2.0', '>=' ) ) {
 				if ( function_exists( '__' ) ) {
-					$provider_metadata_args[] = __( 'Local LLM router supporting Claude, GPT, and OpenAI-compatible backends.', 'wp-dario-provider' );
+					$provider_metadata_args[] = __( 'Local LLM router supporting Claude, GPT, and OpenAI-compatible backends.', 'procyon-dario-provider' );
 				} else {
 					$provider_metadata_args[] = 'Local LLM router supporting Claude, GPT, and OpenAI-compatible backends.';
 				}

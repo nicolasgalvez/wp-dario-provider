@@ -7,7 +7,7 @@ A WordPress 7.0 plugin that registers [Dario](https://github.com/askalf/dario) a
 ## Architecture
 
 ```
-wp-dario-provider.php              Entry point: autoloader, autoupdates, provider registration on init
+procyon-dario-provider.php              Entry point: autoloader, autoupdates, provider registration on init
 src/
   autoload.php                     PSR-4 autoloader for Dario\ namespace
   Provider/DarioProvider.php       Extends AbstractApiProvider (from wordpress/php-ai-client)
@@ -37,7 +37,7 @@ npm ci
 ```bash
 lando start          # Boots Lando + auto-installs WP, theme, and plugin
 ```
-On first run this downloads WP 7.0 RC4 (without bundled themes/plugins via `wp core download --skip-content`), installs core, installs the `twentytwentyfive` theme, and activates `wp-dario-provider`. Idempotent on subsequent starts and on `lando rebuild -y`. The site is at http://wp-dario-test.lndo.site/ (admin/admin).
+On first run this downloads WP 7.0 RC4 (without bundled themes/plugins via `wp core download --skip-content`), installs core, installs the `twentytwentyfive` theme, and activates `procyon-dario-provider`. Idempotent on subsequent starts and on `lando rebuild -y`. The site is at http://wp-dario-test.lndo.site/ (admin/admin).
 
 ### Tests
 ```bash
@@ -53,7 +53,7 @@ lando deploy-plugin
 ### Plugin Check (PCP) — wp.org submission readiness
 ```bash
 lando wp plugin install plugin-check --activate
-lando wp plugin check wp-dario-provider
+lando wp plugin check procyon-dario-provider
 ```
 CI runs this on every PR with the deferred-exception list applied. See [docs/plugin-check.md](docs/plugin-check.md) for the deferred items and which Jira tickets track them.
 
@@ -91,7 +91,7 @@ No implementation without a test. No refactoring without green tests.
 Three places must have matching version bumps:
 1. `readme.txt` — stable tag
 2. `plugin.json` — version field
-3. `wp-dario-provider.php` — header comment version
+3. `procyon-dario-provider.php` — header comment version
 
 Then tag + push: `git tag v0.1.x -m "message" && git push origin v0.1.x`
 

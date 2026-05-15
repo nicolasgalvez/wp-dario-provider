@@ -12,7 +12,7 @@ Connects WordPress to AI models via the [Dario](https://github.com/askalf/dario)
 ## Installation
 
 1. Download the latest release zip from [GitHub Releases](https://github.com/procyon-creative/wp-dario-provider/releases)
-2. Upload to `/wp-content/plugins/wp-dario-provider/` or install via the WordPress plugins screen
+2. Upload to `/wp-content/plugins/procyon-dario-provider/` or install via the WordPress plugins screen
 3. Activate the plugin
 4. Configure your Dario API key in **Settings > Connectors**
 
@@ -62,8 +62,8 @@ Dario must be authenticated for the OS user that runs WordPress/PHP. In Lando:
 ```bash
 lando deploy-plugin
 lando dario login
-lando wp plugin deactivate wp-dario-provider
-lando wp plugin activate wp-dario-provider
+lando wp plugin deactivate procyon-dario-provider
+lando wp plugin activate procyon-dario-provider
 ```
 
 If Dario is not authenticated, activation logs the failure to `wp-content/dario-provider/dario-sidecar.log` and leaves the plugin active.
@@ -140,7 +140,7 @@ chore: bump dependencies
 
 ## Releases
 
-1. Bump version in `readme.txt`, `plugin.json`, and `wp-dario-provider.php`
+1. Bump version in `readme.txt`, `plugin.json`, and `procyon-dario-provider.php`
 2. Tag and push: `git tag v0.1.x -m "message" && git push origin v0.1.x`
 3. GitHub Actions builds the zip and attaches it to the release
 

@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace Dario\Sidecar;
+namespace Procyon\Dario\Sidecar;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-use Dario\Admin\DarioSettings;
-use Dario\Sidecar\Concerns\WithFilesystem;
+use Procyon\Dario\Admin\DarioSettings;
+use Procyon\Dario\Sidecar\Concerns\WithFilesystem;
 
 /**
  * Claude OAuth helpers for the WordPress admin UI.
@@ -24,7 +24,7 @@ class DarioClaudeAuth {
 
 	use WithFilesystem;
 
-	private const SESSION_TRANSIENT_PREFIX = 'dario_oauth_session_';
+	private const SESSION_TRANSIENT_PREFIX = 'procyon_dario_oauth_session_';
 	private const SESSION_TTL              = 600;
 	private const URL_WAIT_MICROSECONDS    = 5_000_000;
 	private const EXIT_WAIT_MICROSECONDS   = 15_000_000;

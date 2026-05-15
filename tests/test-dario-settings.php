@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/bootstrap.php';
 
-use Dario\Admin\DarioSettings;
+use Procyon\Dario\Admin\DarioSettings;
 
 $defaults = DarioSettings::defaults();
 assert( true === $defaults['manage_sidecar'] );

@@ -1,5 +1,5 @@
 {
-    "name": "procyon-creative/wp-dario-provider",
+    "name": "procyon-creative/procyon-dario-provider",
     "description": "AI Provider for Dario local LLM router for the WordPress AI Client.",
     "license": "GPL-2.0-or-later",
     "keywords": [

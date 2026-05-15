@@ -5,7 +5,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/bootstrap.php';
 require_once __DIR__ . '/../wordpress/wp-includes/php-ai-client/autoload.php';
 
-use Dario\Metadata\DarioModelMetadataDirectory;
+use Procyon\Dario\Metadata\DarioModelMetadataDirectory;
 use WordPress\AiClient\Common\Exception\InvalidArgumentException;
 use WordPress\AiClient\Providers\Contracts\ModelMetadataDirectoryInterface;
 

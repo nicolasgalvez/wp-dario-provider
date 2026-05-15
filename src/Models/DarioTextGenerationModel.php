@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Dario\Models;
+namespace Procyon\Dario\Models;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -22,7 +22,7 @@ use WordPress\AiClient\Results\DTO\Candidate;
 use WordPress\AiClient\Results\DTO\GenerativeAiResult;
 use WordPress\AiClient\Results\DTO\TokenUsage;
 use WordPress\AiClient\Results\Enums\FinishReasonEnum;
-use Dario\Provider\DarioProvider;
+use Procyon\Dario\Provider\DarioProvider;
 
 /**
  * Text generation model that routes through the Dario proxy via OpenAI-compatible API.

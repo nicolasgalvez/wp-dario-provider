@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Dario\Admin;
+namespace Procyon\Dario\Admin;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -29,7 +29,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 class DarioSettings {
 
-	public const OPTION_NAME = 'dario_provider_settings';
+	public const OPTION_NAME = 'procyon_dario_settings';
 
 	private const SECRET_KEYS = [
 		'proxy_api_key'  => true,

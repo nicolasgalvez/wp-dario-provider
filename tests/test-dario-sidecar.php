@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/bootstrap.php';
 
-use Dario\Sidecar\DarioSidecar;
+use Procyon\Dario\Sidecar\DarioSidecar;
 
 $plugin_dir = dirname( __DIR__ );
 $log_file   = $plugin_dir . '/sidecar.log';
