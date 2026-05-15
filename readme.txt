@@ -2,7 +2,7 @@
 Contributors:      nicolasgalvez
 Tags:              ai, llm, connector, openai, claude
 Tested up to:      7.0
-Stable tag:        0.2.2
+Stable tag:        0.2.3
 License:           GPL-2.0-or-later
 License URI:       https://spdx.org/licenses/GPL-2.0-or-later.html
 
@@ -50,6 +50,9 @@ To upgrade:
 Your Dario credentials at `~/.dario/credentials.json` and OpenAI backend files at `~/.dario/backends/*.json` are unaffected.
 
 == Changelog ==
+
+= 0.2.3 =
+* HTTP safe-request filters now whitelist the host and port from `DARIO_BASE_URL` (when overridden), not just the sidecar settings. Without this, pointing the AI Client at a remote Dario instance via `DARIO_BASE_URL` would surface "A valid URL was not provided" because `wp_safe_remote_request` blocked the request (WPD-27).
 
 = 0.2.2 =
 * Admin notice now also fires when the Dario sidecar is down (not just when Claude OAuth is missing). Consumers were failing silently on `connection refused` (WPD-20).
