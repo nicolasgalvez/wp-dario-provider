@@ -25,6 +25,10 @@ services:
           wp core download --version=7.0-RC4 --path="$WP_DIR" --skip-content --allow-root
           echo "WordPress 7.0 RC4 extracted."
         fi
+        # Ensure the appserver (non-root) user owns wp-content so the build block
+        # can mkdir inside wp-content/plugins. On macOS Docker this happens by
+        # default through volume permissions; on Linux runners (GHA) it doesn't.
+        chown -R www-data:www-data "$WP_DIR/wp-content" || true
     build:
       - |
         PLUGIN_DIR=/app/wordpress/wp-content/plugins/wp-dario-provider
