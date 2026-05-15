@@ -1,6 +1,6 @@
 {
     "name": "wp-dario-provider",
-    "version": "0.1.4",
+    "version": "0.1.5",
     "download_url": "https://github.com/nicolasgalvez/wp-dario-provider/releases/latest/download/wp-dario-provider.zip",
     "sections": {
         "description": "Connects WordPress to AI models via the Dario local LLM router using the WordPress 7.0 Connectors API."

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Dario\Sidecar;
 
+use Dario\Admin\DarioSettings;
+
 /**
  * Starts and stops the optional Node-based Dario proxy sidecar.
  *
@@ -11,16 +13,61 @@ namespace Dario\Sidecar;
  */
 class DarioSidecar {
 
-	private const PID_OPTION = 'dario_provider_sidecar_pid';
+	private const PID_OPTION              = 'dario_provider_sidecar_pid';
+	private const CONNECTOR_KEY_OPTION    = 'connectors_ai_dario_api_key';
+	private const DEFAULT_CONNECTOR_KEY   = 'dario';
+
+	/**
+	 * Allow `wp_safe_remote_*` to reach the local Dario sidecar.
+	 *
+	 * WordPress's safe HTTP wrapper blocks loopback/RFC1918 hosts and
+	 * non-standard ports unless explicitly allowlisted. The AI Client
+	 * routes its outbound request through `wp_safe_remote_request`, so
+	 * without these filters every Dario call fails with "A valid URL
+	 * was not provided." Both filters are tightly scoped to our own
+	 * configured proxy host/port to avoid widening WP's safe-request
+	 * surface for unrelated requests.
+	 */
+	public static function registerHttpFilters(): void {
+		if ( ! function_exists( 'add_filter' ) ) {
+			return;
+		}
+
+		add_filter(
+			'http_request_host_is_external',
+			static function ( $external, $host ) {
+				return ( $host === self::host() ) ? true : $external;
+			},
+			10,
+			2
+		);
+
+		add_filter(
+			'http_allowed_safe_ports',
+			static function ( $ports, $host ) {
+				if ( $host !== self::host() ) {
+					return $ports;
+				}
+				$port = self::port();
+				if ( is_array( $ports ) && ! in_array( $port, $ports, true ) ) {
+					$ports[] = $port;
+				}
+				return $ports;
+			},
+			10,
+			2
+		);
+	}
 
 	public static function host(): string {
-		$host = self::scalarConfig( 'DARIO_PROXY_HOST' );
-		return $host !== null ? $host : '127.0.0.1';
+		$settings = DarioSettings::effective();
+		return (string) ( $settings['proxy_host'] ?? '127.0.0.1' );
 	}
 
 	public static function port(): int {
-		$port = self::scalarConfig( 'DARIO_PROXY_PORT' );
-		return $port !== null ? max( 1, min( 65535, (int) $port ) ) : 3456;
+		$settings = DarioSettings::effective();
+		$port     = (int) ( $settings['proxy_port'] ?? 3456 );
+		return max( 1, min( 65535, $port ) );
 	}
 
 	public static function baseUrl(): string {
@@ -28,40 +75,54 @@ class DarioSidecar {
 	}
 
 	public static function activate( string $plugin_file ): void {
+		self::ensureConnectorApiKey();
+
 		if ( ! self::shouldManageSidecar() ) {
 			return;
 		}
 
-		$host = self::host();
-		$port = self::port();
-		if ( self::isPortOpen( $host, $port ) ) {
-			self::updateOption( self::PID_OPTION, 0 );
-			return;
-		}
-
 		$plugin_dir = dirname( $plugin_file );
-		$script     = self::scriptPath( $plugin_dir );
-		if ( ! is_file( $script ) ) {
-			self::log( $plugin_dir, 'Dario sidecar script is missing.' );
+		self::startIfNeeded( $plugin_dir );
+	}
+
+	/**
+	 * Ensure the WordPress connector API key option has a value so the AI
+	 * Client binds an auth interface to the Dario provider. Dario's local
+	 * proxy doesn't validate the key, but the AI Client refuses to fire
+	 * outbound requests without one. If our `proxy_api_key` setting is
+	 * non-empty we mirror it; otherwise we default to the literal "dario"
+	 * from Dario's own docs.
+	 */
+	public static function ensureConnectorApiKey(): void {
+		if ( ! function_exists( 'get_option' ) || ! function_exists( 'update_option' ) ) {
 			return;
 		}
 
-		if ( ! self::commandExists( self::nodeBinary() ) ) {
-			self::log( $plugin_dir, 'Node.js is not available; Dario sidecar was not started.' );
+		$current = get_option( self::CONNECTOR_KEY_OPTION, '' );
+		if ( is_string( $current ) && $current !== '' ) {
 			return;
 		}
 
-		$pid = self::start( $plugin_dir );
-		if ( $pid > 0 ) {
-			if ( self::waitForPort( $host, $port ) ) {
-				self::updateOption( self::PID_OPTION, $pid );
-				return;
-			}
+		$desired = self::desiredConnectorApiKey();
+		update_option( self::CONNECTOR_KEY_OPTION, $desired, false );
+	}
 
-			self::stopProcess( $pid );
-			self::deleteOption( self::PID_OPTION );
-			self::log( $plugin_dir, 'Dario sidecar started but did not open the proxy port.' );
+	/**
+	 * Force the connector option back in sync with the proxy_api_key
+	 * setting. Called from the admin save handler after proxy_api_key
+	 * changes so requests keep working.
+	 */
+	public static function syncConnectorApiKey(): void {
+		if ( ! function_exists( 'update_option' ) ) {
+			return;
 		}
+		update_option( self::CONNECTOR_KEY_OPTION, self::desiredConnectorApiKey(), false );
+	}
+
+	private static function desiredConnectorApiKey(): string {
+		$settings = DarioSettings::effective();
+		$proxy_key = isset( $settings['proxy_api_key'] ) ? (string) $settings['proxy_api_key'] : '';
+		return $proxy_key !== '' ? $proxy_key : self::DEFAULT_CONNECTOR_KEY;
 	}
 
 	public static function deactivate(): void {
@@ -70,6 +131,64 @@ class DarioSidecar {
 			self::stopProcess( (int) $pid );
 		}
 		self::deleteOption( self::PID_OPTION );
+	}
+
+	/**
+	 * Public restart entrypoint for the admin page.
+	 *
+	 * @return array{ok:bool, message:string, pid?:int}
+	 */
+	public static function restart( string $plugin_dir ): array {
+		self::deactivate();
+
+		if ( ! self::shouldManageSidecar() ) {
+			return [ 'ok' => false, 'message' => 'Sidecar management is disabled.' ];
+		}
+
+		$pid = self::startIfNeeded( $plugin_dir );
+		if ( $pid > 0 ) {
+			return [ 'ok' => true, 'message' => 'Sidecar started.', 'pid' => $pid ];
+		}
+
+		if ( self::isPortOpen( self::host(), self::port() ) ) {
+			return [ 'ok' => true, 'message' => 'Sidecar already running on the configured port.' ];
+		}
+
+		return [ 'ok' => false, 'message' => 'Sidecar did not start. See log for details.' ];
+	}
+
+	/**
+	 * Snapshot of sidecar runtime state for the admin page.
+	 *
+	 * @return array{
+	 *   node_available: bool,
+	 *   node_version: ?string,
+	 *   sidecar_running: bool,
+	 *   pid: ?int,
+	 *   proxy_url: string,
+	 *   log_path: string,
+	 *   log_tail: array<int, string>
+	 * }
+	 */
+	public static function status( string $plugin_dir ): array {
+		$node_binary    = self::nodeBinary();
+		$node_available = self::commandExists( $node_binary );
+		$node_version   = $node_available ? self::nodeVersion( $node_binary ) : null;
+
+		$pid_option = self::getOption( self::PID_OPTION );
+		$pid        = is_numeric( $pid_option ) && (int) $pid_option > 0 ? (int) $pid_option : null;
+
+		$running = self::isPortOpen( self::host(), self::port() );
+
+		return [
+			'node_available'  => $node_available,
+			'node_version'    => $node_version,
+			'sidecar_running' => $running,
+			'pid'             => $pid,
+			'proxy_url'       => self::baseUrl(),
+			'log_path'        => self::logFile( $plugin_dir ),
+			'log_tail'        => self::lastLogLines( $plugin_dir, 25 ),
+		];
 	}
 
 	public static function start( string $plugin_dir ): int {
@@ -81,12 +200,22 @@ class DarioSidecar {
 	}
 
 	public static function buildStartCommand( string $plugin_dir, string $log_file ): string {
-		$env = sprintf(
-			'DARIO_PROXY_HOST=%s DARIO_PROXY_PORT=%s DARIO_LOG_FILE=%s',
-			escapeshellarg( self::host() ),
-			escapeshellarg( (string) self::port() ),
-			escapeshellarg( self::requestLogFile( $plugin_dir ) )
-		);
+		$env_pairs = [
+			'DARIO_PROXY_HOST' => self::host(),
+			'DARIO_PROXY_PORT' => (string) self::port(),
+			'DARIO_LOG_FILE'   => self::requestLogFile( $plugin_dir ),
+		];
+
+		$proxy_key = self::proxyApiKey();
+		if ( $proxy_key !== '' ) {
+			$env_pairs['DARIO_API_KEY'] = $proxy_key;
+		}
+
+		$env_parts = [];
+		foreach ( $env_pairs as $name => $value ) {
+			$env_parts[] = $name . '=' . escapeshellarg( $value );
+		}
+		$env = implode( ' ', $env_parts );
 
 		return sprintf(
 			'%s nohup %s %s >> %s 2>&1 & echo $!',
@@ -109,6 +238,62 @@ class DarioSidecar {
 		return self::writableDirectory( $plugin_dir ) . '/dario-requests.jsonl';
 	}
 
+	/**
+	 * @return array<int, string>
+	 */
+	public static function lastLogLines( string $plugin_dir, int $lines = 25 ): array {
+		$path = self::logFile( $plugin_dir );
+		if ( ! is_file( $path ) ) {
+			return [];
+		}
+
+		$contents = @file( $path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES );
+		if ( ! is_array( $contents ) ) {
+			return [];
+		}
+
+		if ( count( $contents ) <= $lines ) {
+			return $contents;
+		}
+
+		return array_slice( $contents, -1 * $lines );
+	}
+
+	private static function startIfNeeded( string $plugin_dir ): int {
+		$host = self::host();
+		$port = self::port();
+		if ( self::isPortOpen( $host, $port ) ) {
+			self::updateOption( self::PID_OPTION, 0 );
+			return 0;
+		}
+
+		$script = self::scriptPath( $plugin_dir );
+		if ( ! is_file( $script ) ) {
+			self::log( $plugin_dir, 'Dario sidecar script is missing.' );
+			return 0;
+		}
+
+		if ( ! self::commandExists( self::nodeBinary() ) ) {
+			self::log( $plugin_dir, 'Node.js is not available; Dario sidecar was not started.' );
+			return 0;
+		}
+
+		$pid = self::start( $plugin_dir );
+		if ( $pid <= 0 ) {
+			return 0;
+		}
+
+		if ( self::waitForPort( $host, $port ) ) {
+			self::updateOption( self::PID_OPTION, $pid );
+			return $pid;
+		}
+
+		self::stopProcess( $pid );
+		self::deleteOption( self::PID_OPTION );
+		self::log( $plugin_dir, 'Dario sidecar started but did not open the proxy port.' );
+		return 0;
+	}
+
 	private static function writableDirectory( string $plugin_dir ): string {
 		if ( defined( 'WP_CONTENT_DIR' ) ) {
 			$dir = rtrim( (string) WP_CONTENT_DIR, '/\\' ) . '/dario-provider';
@@ -124,31 +309,33 @@ class DarioSidecar {
 	}
 
 	private static function nodeBinary(): string {
-		$binary = self::scalarConfig( 'DARIO_NODE_BINARY' );
-		return $binary !== null ? $binary : 'node';
+		$settings = DarioSettings::effective();
+		$binary   = (string) ( $settings['node_binary'] ?? 'node' );
+		return $binary !== '' ? $binary : 'node';
+	}
+
+	private static function proxyApiKey(): string {
+		$settings = DarioSettings::effective();
+		return (string) ( $settings['proxy_api_key'] ?? '' );
 	}
 
 	private static function shouldManageSidecar(): bool {
-		$value = self::scalarConfig( 'DARIO_MANAGE_SIDECAR' );
-		if ( $value === null ) {
-			return true;
-		}
-
-		return filter_var( $value, FILTER_VALIDATE_BOOLEAN );
-	}
-
-	private static function scalarConfig( string $name ): ?string {
-		if ( defined( $name ) && is_scalar( constant( $name ) ) ) {
-			return (string) constant( $name );
-		}
-
-		$value = getenv( $name );
-		return $value === false ? null : (string) $value;
+		$settings = DarioSettings::effective();
+		return (bool) ( $settings['manage_sidecar'] ?? true );
 	}
 
 	private static function commandExists( string $command ): bool {
 		$output = shell_exec( 'command -v ' . escapeshellcmd( $command ) . ' 2>/dev/null' );
 		return is_string( $output ) && trim( $output ) !== '';
+	}
+
+	private static function nodeVersion( string $binary ): ?string {
+		$output = shell_exec( escapeshellcmd( $binary ) . ' --version 2>/dev/null' );
+		if ( ! is_string( $output ) ) {
+			return null;
+		}
+		$version = trim( $output );
+		return $version === '' ? null : $version;
 	}
 
 	private static function isPortOpen( string $host, int $port ): bool {
