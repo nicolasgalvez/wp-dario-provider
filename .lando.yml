@@ -86,6 +86,19 @@ services:
         if ! wp plugin is-active procyon-dario-provider 2>/dev/null; then
           wp plugin activate procyon-dario-provider
         fi
+        # Required test/dev companions:
+        #   - `ai` is the wp.org consumer plugin we use to verify end-to-end
+        #     integration (Title Generation ability routes through DarioProvider).
+        #   - `plugin-check` is the official PCP tool the CI gate runs.
+        # Both are installed from wp.org if missing and activated. Idempotent.
+        for slug in ai plugin-check; do
+          if ! wp plugin is-installed "$slug" 2>/dev/null; then
+            echo "Installing $slug..."
+            wp plugin install "$slug" --activate
+          elif ! wp plugin is-active "$slug" 2>/dev/null; then
+            wp plugin activate "$slug"
+          fi
+        done
     overrides:
       environment:
         WP_DB_HOST: database

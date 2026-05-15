@@ -102,6 +102,16 @@ The GitHub Actions workflow builds the zip and attaches it to the release automa
 - Jira board: [WPD project](https://procyoncreative.atlassian.net/jira/software/c/projects/WPD/boards/201)
 - See [docs/jira.md](docs/jira.md) for ticket conventions, required secrets, and the workflow that syncs PRs ↔ tickets.
 
+## Admin UX
+
+The Settings → Dario AI Connector page renders sections in this order: **Status → Claude Authentication → Sidecar Settings → OpenAI Backend**. Claude auth is at position 2 because nothing else works without it.
+
+When Claude is not authenticated and the user can `manage_options`, a site-wide admin notice fires on every admin page (suppressed on the settings page itself). The notice is `notice-error` for missing credentials, `notice-warning` for present-but-invalid credentials. Status is cached in the `procyon_dario_auth_status_cache` transient with a 60s TTL; the cache is busted when OAuth completes or credentials.json is imported.
+
+In the Status table, the Claude auth row gets red text + warning dashicon when severity is `error`, orange + dashicon when `warning`. Severity is computed by `DarioSettingsPage::claudeStatusSeverity()` from the Dario `getStatus()` enum (`healthy`/`expiring`/`broken`/`none`).
+
+Secret fields render as empty `password` inputs with `placeholder="*****"` whenever a value exists (stored or supplied via `DARIO_*` constant/env override). Stored bytes are never echoed back. Override-controlled fields render with the `disabled` attribute and a description naming the constant.
+
 ## Things an Agent Might Get Wrong
 
 - **This is not a block/frontend plugin.** It has a Node sidecar runtime for Dario, but no `wp-scripts build` and no blocks.
