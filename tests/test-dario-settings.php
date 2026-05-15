@@ -97,4 +97,55 @@ $effective2 = DarioSettings::effective();
 assert( 65535 === (int) $effective2['proxy_port'] );
 putenv( 'DARIO_PROXY_PORT' );
 
+// --- Secret preservation: the WPD-1 rule that an empty submitted value
+// keeps the existing stored secret (not blank it). The admin saves the
+// page without re-entering the password; the stored value must survive.
+
+test_option_store_reset();
+update_option( 'procyon_dario_settings', [
+	'manage_sidecar' => true,
+	'node_binary'    => 'node',
+	'proxy_host'     => '127.0.0.1',
+	'proxy_port'     => 3456,
+	'proxy_api_key'  => 'sk-existing-proxy',
+	'openai_backend_enabled' => true,
+	'openai_backend_name'    => 'wordpress',
+	'openai_base_url'        => 'https://api.openai.com/v1',
+	'openai_api_key'         => 'sk-existing-openai',
+	'openai_default_model'   => 'gpt-4o',
+] );
+
+// Form submitted with the password fields empty. Common case: admin clicks Save
+// after changing only the proxy host.
+$preserved = DarioSettings::sanitize( [
+	'manage_sidecar' => '1',
+	'node_binary'    => 'node',
+	'proxy_host'     => '127.0.0.1',
+	'proxy_port'     => 3456,
+	'proxy_api_key'  => '',
+	'openai_backend_enabled' => '1',
+	'openai_backend_name'    => 'wordpress',
+	'openai_base_url'        => 'https://api.openai.com/v1',
+	'openai_api_key'         => '',
+	'openai_default_model'   => 'gpt-4o',
+] );
+assert( 'sk-existing-proxy' === $preserved['proxy_api_key'], 'empty proxy_api_key preserves stored value' );
+assert( 'sk-existing-openai' === $preserved['openai_api_key'], 'empty openai_api_key preserves stored value' );
+
+// A non-empty new value DOES overwrite.
+$replaced = DarioSettings::sanitize( [
+	'proxy_api_key'  => 'sk-new-value',
+	'openai_api_key' => 'sk-new-openai',
+] );
+assert( 'sk-new-value' === $replaced['proxy_api_key'], 'non-empty value replaces stored secret' );
+assert( 'sk-new-openai' === $replaced['openai_api_key'], 'non-empty value replaces openai secret' );
+
+// Form submitted with the secret field MISSING entirely (not the same as empty).
+// Same outcome: preserved.
+$missing = DarioSettings::sanitize( [
+	'manage_sidecar' => '1',
+] );
+assert( 'sk-existing-proxy' === $missing['proxy_api_key'], 'missing proxy_api_key field preserves stored value' );
+assert( 'sk-existing-openai' === $missing['openai_api_key'], 'missing openai_api_key field preserves stored value' );
+
 echo "test-dario-settings ok\n";
