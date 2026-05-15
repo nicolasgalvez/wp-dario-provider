@@ -16,6 +16,7 @@ use WordPress\AiClient\Providers\Models\Contracts\ModelInterface;
 use WordPress\AiClient\Providers\Models\DTO\ModelMetadata;
 use Dario\Metadata\DarioModelMetadataDirectory;
 use Dario\Models\DarioTextGenerationModel;
+use Dario\Sidecar\DarioSidecar;
 
 /**
  * Dario AI provider.
@@ -30,8 +31,11 @@ class DarioProvider extends AbstractApiProvider {
 	/**
 	 * Returns the base URL for the Dario API.
 	 *
-	 * Configurable via the `DARIO_BASE_URL` constant or environment variable.
-	 * Defaults to `http://localhost:3456/v1`.
+	 * Resolution order:
+	 *   1. `DARIO_BASE_URL` constant
+	 *   2. `DARIO_BASE_URL` environment variable
+	 *   3. Settings-derived sidecar URL (host/port from plugin settings)
+	 *   4. `http://127.0.0.1:3456/v1`
 	 *
 	 * @since 0.1.0
 	 *
@@ -47,7 +51,11 @@ class DarioProvider extends AbstractApiProvider {
 			return $env_url;
 		}
 
-		return 'http://localhost:3456/v1';
+		if ( class_exists( DarioSidecar::class ) ) {
+			return DarioSidecar::baseUrl();
+		}
+
+		return 'http://127.0.0.1:3456/v1';
 	}
 
 	/**

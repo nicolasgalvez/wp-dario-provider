@@ -2,7 +2,7 @@
 Contributors:      nicolasgalvez
 Tags:              ai, dario, llm, connector, openai, claude
 Tested up to:      7.0
-Stable tag:        0.1.4
+Stable tag:        0.1.5
 License:           GPL-2.0-or-later
 License URI:       https://spdx.org/licenses/GPL-2.0-or-later.html
 
@@ -38,6 +38,12 @@ This plugin registers [Dario](https://github.com/askalf/dario) as an AI provider
 1. Configure your Dario API key in Settings > Connectors.
 
 == Changelog ==
+
+= 0.1.5 =
+* Add Settings > Dario AI Connector admin page with sidecar status, restart, and proxy/backend configuration.
+* Persist Dario sidecar settings (host, port, proxy API key, node binary) in WordPress options with constant/env overrides.
+* Write OpenAI-compatible backend credentials to ~/.dario/backends/<name>.json from the admin UI.
+* Drive Dario's manual Claude OAuth flow from the admin page so admins can authenticate without SSH.
 
 = 0.1.4 =
 * Start a bundled Dario Node sidecar on plugin activation when Node.js is available.
