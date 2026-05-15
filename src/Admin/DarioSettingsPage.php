@@ -19,11 +19,13 @@ use Procyon\Dario\Sidecar\DarioSidecar;
  */
 class DarioSettingsPage {
 
-	public const MENU_SLUG       = 'dario-ai-connector';
-	private const NONCE_ACTION   = 'dario_settings_action';
-	private const NONCE_FIELD    = 'dario_settings_nonce';
-	private const FLASH_OPTION   = 'procyon_dario_flash';
-	private const OAUTH_TRANSIENT = 'procyon_dario_oauth_active';
+	public const MENU_SLUG               = 'dario-ai-connector';
+	private const NONCE_ACTION           = 'dario_settings_action';
+	private const NONCE_FIELD            = 'dario_settings_nonce';
+	private const FLASH_OPTION           = 'procyon_dario_flash';
+	private const OAUTH_TRANSIENT        = 'procyon_dario_oauth_active';
+	private const AUTH_NOTICE_TRANSIENT  = 'procyon_dario_auth_status_cache';
+	private const AUTH_NOTICE_TTL        = 60;
 
 	private string $plugin_file;
 
@@ -34,6 +36,7 @@ class DarioSettingsPage {
 	public static function bootstrap( string $plugin_file ): void {
 		$page = new self( $plugin_file );
 		add_action( 'admin_menu', [ $page, 'registerMenu' ] );
+		add_action( 'admin_notices', [ $page, 'renderAuthNotice' ] );
 		add_action( 'admin_post_procyon_dario_save_settings', [ $page, 'handleSaveSettings' ] );
 		add_action( 'admin_post_procyon_dario_restart_sidecar', [ $page, 'handleRestartSidecar' ] );
 		add_action( 'admin_post_procyon_dario_test_backend', [ $page, 'handleTestBackend' ] );
@@ -79,28 +82,83 @@ class DarioSettingsPage {
 		}
 
 		$this->renderStatusSection( $status, $claude );
+		$this->renderClaudeAuthSection( $claude, $oauth );
 		$this->renderSidecarRestartForm();
 		$this->renderSettingsForm( $settings );
 		$this->renderBackendActions( $settings );
-		$this->renderClaudeAuthSection( $claude, $oauth );
 
 		echo '</div>';
+	}
+
+	/**
+	 * Site-wide admin notice when Claude is not authenticated. Suppressed on
+	 * the settings page itself (the page already shows full status) and
+	 * cached in a transient so we don't shell out to the helper script on
+	 * every admin page load.
+	 */
+	public function renderAuthNotice(): void {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			return;
+		}
+		$screen = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
+		if ( $screen && isset( $screen->id ) && false !== strpos( (string) $screen->id, self::MENU_SLUG ) ) {
+			return;
+		}
+
+		$claude = get_transient( self::AUTH_NOTICE_TRANSIENT );
+		if ( ! is_array( $claude ) ) {
+			$claude = DarioClaudeAuth::status( dirname( $this->plugin_file ) );
+			set_transient( self::AUTH_NOTICE_TRANSIENT, $claude, self::AUTH_NOTICE_TTL );
+		}
+
+		if ( ! empty( $claude['authenticated'] ) ) {
+			return;
+		}
+
+		$status      = (string) ( $claude['status'] ?? 'none' );
+		$is_warning  = in_array( $status, [ 'expiring', 'broken' ], true ) || ! empty( $claude['hasCredentials'] );
+		$class       = $is_warning ? 'notice notice-warning' : 'notice notice-error';
+		$message     = $is_warning
+			? __( 'Dario AI Connector: Claude credentials are present but not currently valid. The AI provider will not work until you re-authenticate.', 'procyon-dario-provider' )
+			: __( 'Dario AI Connector: Claude is not authenticated. The AI provider will not work until you log in.', 'procyon-dario-provider' );
+		$url         = admin_url( 'options-general.php?page=' . self::MENU_SLUG );
+
+		echo '<div class="' . esc_attr( $class ) . '"><p><strong>' . esc_html( $message ) . '</strong> ';
+		echo '<a href="' . esc_url( $url ) . '">' . esc_html__( 'Configure now →', 'procyon-dario-provider' ) . '</a></p></div>';
 	}
 
 	private function renderStatusSection( array $status, array $claude ): void {
 		echo '<h2>' . esc_html__( 'Status', 'procyon-dario-provider' ) . '</h2>';
 		echo '<table class="widefat striped" style="max-width:760px;">';
 		$rows = [
-			__( 'Plugin version', 'procyon-dario-provider' )    => $this->pluginVersion(),
-			__( 'Node available', 'procyon-dario-provider' )    => $status['node_available'] ? __( 'Yes', 'procyon-dario-provider' ) : __( 'No', 'procyon-dario-provider' ),
-			__( 'Node version', 'procyon-dario-provider' )      => $status['node_version'] ?? __( 'unknown', 'procyon-dario-provider' ),
-			__( 'Sidecar running', 'procyon-dario-provider' )   => $status['sidecar_running'] ? __( 'Yes', 'procyon-dario-provider' ) : __( 'No', 'procyon-dario-provider' ),
-			__( 'Sidecar PID', 'procyon-dario-provider' )       => $status['pid'] ? (string) $status['pid'] : __( 'unknown', 'procyon-dario-provider' ),
-			__( 'Proxy URL', 'procyon-dario-provider' )         => $status['proxy_url'],
-			__( 'Claude auth', 'procyon-dario-provider' )       => $this->formatClaudeStatus( $claude ),
+			__( 'Plugin version', 'procyon-dario-provider' )    => [ 'value' => $this->pluginVersion() ],
+			__( 'Node available', 'procyon-dario-provider' )    => [ 'value' => $status['node_available'] ? __( 'Yes', 'procyon-dario-provider' ) : __( 'No', 'procyon-dario-provider' ) ],
+			__( 'Node version', 'procyon-dario-provider' )      => [ 'value' => $status['node_version'] ?? __( 'unknown', 'procyon-dario-provider' ) ],
+			__( 'Sidecar running', 'procyon-dario-provider' )   => [ 'value' => $status['sidecar_running'] ? __( 'Yes', 'procyon-dario-provider' ) : __( 'No', 'procyon-dario-provider' ) ],
+			__( 'Sidecar PID', 'procyon-dario-provider' )       => [ 'value' => $status['pid'] ? (string) $status['pid'] : __( 'unknown', 'procyon-dario-provider' ) ],
+			__( 'Proxy URL', 'procyon-dario-provider' )         => [ 'value' => $status['proxy_url'] ],
+			__( 'Claude auth', 'procyon-dario-provider' )       => [
+				'value'    => $this->formatClaudeStatus( $claude ),
+				'severity' => $this->claudeStatusSeverity( $claude ),
+			],
 		];
-		foreach ( $rows as $label => $value ) {
-			echo '<tr><th scope="row" style="text-align:left;width:200px;">' . esc_html( (string) $label ) . '</th><td>' . esc_html( (string) $value ) . '</td></tr>';
+		foreach ( $rows as $label => $row ) {
+			$severity   = $row['severity'] ?? 'ok';
+			$style      = '';
+			$show_icon  = false;
+			if ( $severity === 'error' ) {
+				$style     = 'color:#b32d2e;font-weight:600;';
+				$show_icon = true;
+			} elseif ( $severity === 'warning' ) {
+				$style     = 'color:#996800;font-weight:600;';
+				$show_icon = true;
+			}
+			echo '<tr><th scope="row" style="text-align:left;width:200px;">' . esc_html( (string) $label ) . '</th><td style="' . esc_attr( $style ) . '">';
+			if ( $show_icon ) {
+				echo '<span class="dashicons dashicons-warning" aria-hidden="true" style="margin-right:4px;"></span>';
+			}
+			echo esc_html( (string) $row['value'] );
+			echo '</td></tr>';
 		}
 		echo '</table>';
 
@@ -109,6 +167,20 @@ class DarioSettingsPage {
 			echo '<pre style="white-space:pre-wrap;background:#f6f7f7;padding:8px;">' . esc_html( implode( "\n", (array) $status['log_tail'] ) ) . '</pre>';
 			echo '</details>';
 		}
+	}
+
+	/**
+	 * @return string 'ok' | 'warning' | 'error'
+	 */
+	private function claudeStatusSeverity( array $claude ): string {
+		if ( ! empty( $claude['error'] ) ) {
+			return 'error';
+		}
+		if ( ! empty( $claude['authenticated'] ) ) {
+			$status = (string) ( $claude['status'] ?? 'healthy' );
+			return $status === 'expiring' ? 'warning' : 'ok';
+		}
+		return ! empty( $claude['hasCredentials'] ) ? 'warning' : 'error';
 	}
 
 	private function renderSidecarRestartForm(): void {
@@ -252,13 +324,15 @@ class DarioSettingsPage {
 	}
 
 	private function renderSecretRow( string $key, string $label, string $stored, string $description ): void {
-		$disabled = DarioSettings::isOverridden( $key ) ? 'disabled' : '';
-		$mask     = $stored !== '' ? DarioSettings::maskSecret( $stored ) : '';
+		$is_overridden  = DarioSettings::isOverridden( $key );
+		$disabled       = $is_overridden ? 'disabled' : '';
+		$has_value      = $stored !== '' || $is_overridden;
+		// `*****` placeholder when a value (stored or override-supplied) exists,
+		// otherwise empty so the field reads as unset. The actual stored bytes
+		// are never echoed.
+		$placeholder    = $has_value ? '*****' : '';
 		echo '<tr><th scope="row"><label for="dario-' . esc_attr( $key ) . '">' . esc_html( $label ) . '</label></th><td>';
-		echo '<input type="password" class="regular-text" id="dario-' . esc_attr( $key ) . '" name="' . esc_attr( $key ) . '" value="" autocomplete="new-password" ' . esc_attr( $disabled ) . '>';
-		if ( $mask !== '' ) {
-			echo ' <code>' . esc_html( $mask ) . '</code>';
-		}
+		echo '<input type="password" class="regular-text" id="dario-' . esc_attr( $key ) . '" name="' . esc_attr( $key ) . '" value="" placeholder="' . esc_attr( $placeholder ) . '" autocomplete="new-password" ' . esc_attr( $disabled ) . '>';
 		echo '<p class="description">' . esc_html( $description ) . '</p>';
 		$this->renderOverrideNote( $key );
 		echo '</td></tr>';
@@ -395,6 +469,7 @@ class DarioSettingsPage {
 		$result = DarioClaudeAuth::submitManualCode( $session_id, $pasted );
 		if ( $result['ok'] ) {
 			$this->clearActiveOAuthSession();
+			delete_transient( self::AUTH_NOTICE_TRANSIENT );
 		}
 		$this->setFlash( (string) $result['message'], (string) ( $result['log_tail'] ?? '' ), ! $result['ok'] );
 		$this->redirectBack();
@@ -405,6 +480,9 @@ class DarioSettingsPage {
 		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- nonce verified in verifyRequest().
 		$pasted = isset( $_POST['credentials'] ) ? sanitize_textarea_field( wp_unslash( (string) $_POST['credentials'] ) ) : '';
 		$result = DarioClaudeAuth::importCredentialsJson( $pasted );
+		if ( $result['ok'] ) {
+			delete_transient( self::AUTH_NOTICE_TRANSIENT );
+		}
 		$this->setFlash(
 			(string) $result['message'],
 			isset( $result['path'] ) ? sprintf( 'Wrote %s', (string) $result['path'] ) : '',
