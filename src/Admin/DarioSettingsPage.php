@@ -292,7 +292,7 @@ class DarioSettingsPage {
 
 		echo '<details style="margin-top:12px;"><summary>' . esc_html__( 'Run from a shell instead', 'procyon-dario-provider' ) . '</summary>';
 		echo '<pre style="white-space:pre-wrap;background:#f6f7f7;padding:8px;">';
-		echo esc_html( "# SSH\ndario login\n\n# Lando\nlando dario login\nlando wp plugin deactivate procyon-dario-provider\nlando wp plugin activate procyon-dario-provider" );
+		echo esc_html( "dario login" );
 		echo '</pre></details>';
 
 		echo '<details style="margin-top:12px;"><summary>' . esc_html__( 'Paste credentials.json from another machine', 'procyon-dario-provider' ) . '</summary>';
