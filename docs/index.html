@@ -1,0 +1,869 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Dario AI Connector — WordPress AI provider for the Dario LLM router</title>
+	<meta name="description" content="Connects WordPress to AI models via the Dario local LLM router, using the WordPress 7.0 Connectors API. One endpoint for Claude, GPT, and any OpenAI-compatible backend.">
+	<meta name="theme-color" content="#0a0628">
+	<meta property="og:title" content="Dario AI Connector">
+	<meta property="og:description" content="WordPress AI provider for the Dario local LLM router. One endpoint for Claude, GPT, and any OpenAI-compatible backend.">
+	<meta property="og:type" content="website">
+	<meta property="og:url" content="https://procyon-creative.github.io/wp-dario-provider/">
+
+	<link rel="icon" type="image/svg+xml" href="procyon-icon.svg">
+
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;700;900&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+
+	<style>
+		:root {
+			/* Surfaces — deep navy with hint of purple */
+			--bg: #0a0628;
+			--bg-2: #120a3a;
+			--bg-3: #1a1145;
+			--surface: #150a36;
+			--surface-2: #1d1148;
+
+			/* Ink */
+			--ink: #f3edff;
+			--ink-soft: #d6cfff;
+			--ink-mute: #9b94c2;
+			--ink-mute-strong: #b9b3dc;
+
+			/* Lines */
+			--rule: #4a3a8a;
+			--rule-soft: #2c1f5e;
+
+			/* Brand riso (decorative / gradient stops) */
+			--cyan: #2cd5de;
+			--magenta: #de1bb0;
+			--yellow: #e8dc31;
+			--orange: #ff7a45;
+
+			/* Accessible neon foregrounds tuned for --bg
+			 * (all >= 4.5:1 against #0a0628). */
+			--neon-cyan: #6cf3fb;
+			--neon-magenta: #ff6ed3;
+			--neon-yellow: #f6e858;
+			--neon-orange: #ff9b6e;
+
+			/* Glow stack — used in text-shadow */
+			--glow-cyan: 0 0 12px rgba(108, 243, 251, 0.45), 0 0 24px rgba(44, 213, 222, 0.25);
+			--glow-magenta: 0 0 12px rgba(255, 110, 211, 0.45), 0 0 28px rgba(222, 27, 176, 0.22);
+			--glow-yellow: 0 0 12px rgba(246, 232, 88, 0.4), 0 0 24px rgba(232, 220, 49, 0.22);
+
+			--rule-w: 1.5px;
+			--page-px: clamp(20px, 4vw, 56px);
+			--max: 1240px;
+		}
+
+		* { box-sizing: border-box; }
+
+		html, body {
+			margin: 0;
+			padding: 0;
+			background: var(--bg);
+			color: var(--ink);
+			font-family: 'IBM Plex Sans', system-ui, sans-serif;
+			font-size: 17px;
+			line-height: 1.55;
+			-webkit-font-smoothing: antialiased;
+			text-rendering: optimizeLegibility;
+		}
+
+		/* Atmosphere — deep radial vignette, magenta-to-navy from upper-right */
+		body::before {
+			content: '';
+			position: fixed;
+			inset: 0;
+			pointer-events: none;
+			z-index: 0;
+			background:
+				radial-gradient(900px 600px at 110% -10%, rgba(222, 27, 176, 0.18), transparent 60%),
+				radial-gradient(800px 600px at -10% 30%, rgba(44, 213, 222, 0.14), transparent 60%),
+				radial-gradient(1200px 800px at 50% 100%, rgba(255, 122, 69, 0.10), transparent 60%);
+		}
+
+		/* Faint horizontal noise — adds film-grain / signal feel */
+		body::after {
+			content: '';
+			position: fixed;
+			inset: 0;
+			pointer-events: none;
+			z-index: 1;
+			opacity: 0.20;
+			mix-blend-mode: overlay;
+			background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.95' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.7  0 0 0 0 0.6  0 0 0 0 1.0  0 0 0 0.55 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+		}
+
+		main {
+			position: relative;
+			z-index: 2;
+			max-width: var(--max);
+			margin: 0 auto;
+			padding: 0 var(--page-px);
+		}
+
+		a { color: var(--neon-cyan); text-decoration: underline; text-decoration-thickness: 1.5px; text-underline-offset: 4px; transition: color 0.15s, text-shadow 0.15s; }
+		a:hover { color: var(--neon-magenta); text-shadow: var(--glow-magenta); }
+
+		/* Disable noise + glows for users who ask */
+		@media (prefers-reduced-motion: reduce) {
+			* { transition: none !important; animation: none !important; }
+		}
+
+		/* ---------- TOP STRIP ---------- */
+		.strip {
+			border-bottom: var(--rule-w) solid var(--rule-soft);
+			background: rgba(10, 6, 40, 0.7);
+			backdrop-filter: blur(8px);
+			-webkit-backdrop-filter: blur(8px);
+			position: sticky;
+			top: 0;
+			z-index: 10;
+		}
+		.strip-inner {
+			max-width: var(--max);
+			margin: 0 auto;
+			padding: 12px var(--page-px);
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+			gap: 24px;
+			font-family: 'JetBrains Mono', monospace;
+			font-size: 12px;
+			letter-spacing: 0.08em;
+			text-transform: uppercase;
+			color: var(--ink-mute-strong);
+		}
+		.strip-brand {
+			display: flex;
+			align-items: center;
+			gap: 14px;
+			min-width: 0;
+		}
+		.strip-brand a { text-decoration: none; }
+		.strip-brand .logo {
+			display: block;
+			height: 26px;
+			width: auto;
+			filter: drop-shadow(0 0 12px rgba(255, 110, 211, 0.4));
+		}
+		.strip-brand .sep { color: var(--rule); }
+		.strip-brand .pkg {
+			color: var(--ink);
+			font-weight: 500;
+		}
+		.strip-nav { display: flex; gap: 22px; }
+		.strip-nav a {
+			text-decoration: none;
+			color: var(--ink-mute-strong);
+		}
+		.strip-nav a:hover {
+			color: var(--neon-cyan);
+			text-shadow: var(--glow-cyan);
+		}
+		@media (max-width: 520px) {
+			.strip-brand .logo { height: 22px; }
+			.strip-brand .sep, .strip-brand .pkg { display: none; }
+		}
+
+		/* ---------- HERO ---------- */
+		.hero {
+			padding: clamp(56px, 9vw, 130px) 0 clamp(48px, 6vw, 96px);
+			position: relative;
+		}
+
+		/* Perspective grid floor — Tron-ish, very subtle */
+		.hero::before {
+			content: '';
+			position: absolute;
+			left: 0; right: 0; bottom: 0;
+			height: 60%;
+			pointer-events: none;
+			z-index: 0;
+			opacity: 0.4;
+			background-image:
+				linear-gradient(transparent 0%, transparent 70%, rgba(108, 243, 251, 0.18) 70%, rgba(108, 243, 251, 0.18) 71%, transparent 71%),
+				repeating-linear-gradient(90deg, rgba(108, 243, 251, 0.12) 0, rgba(108, 243, 251, 0.12) 1px, transparent 1px, transparent 80px),
+				repeating-linear-gradient(0deg, rgba(108, 243, 251, 0.10) 0, rgba(108, 243, 251, 0.10) 1px, transparent 1px, transparent 60px);
+			mask-image: linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.55) 60%, rgba(0,0,0,0.85) 100%);
+			-webkit-mask-image: linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.55) 60%, rgba(0,0,0,0.85) 100%);
+		}
+
+		.hero-inner { position: relative; z-index: 1; }
+
+		.eyebrow {
+			font-family: 'JetBrains Mono', monospace;
+			font-size: 12px;
+			letter-spacing: 0.22em;
+			text-transform: uppercase;
+			color: var(--ink-mute-strong);
+			margin-bottom: 36px;
+			display: inline-flex;
+			align-items: center;
+			gap: 12px;
+		}
+		.eyebrow .pulse {
+			width: 8px;
+			height: 8px;
+			background: var(--neon-magenta);
+			border-radius: 50%;
+			box-shadow: var(--glow-magenta);
+		}
+
+		.hero-lockup {
+			display: flex;
+			align-items: center;
+			gap: 28px;
+			margin-bottom: 36px;
+			flex-wrap: wrap;
+		}
+		.hero-lockup .mark {
+			height: clamp(64px, 9vw, 110px);
+			width: auto;
+			filter: drop-shadow(0 0 24px rgba(222, 27, 176, 0.55));
+		}
+		.hero-lockup .word {
+			font-family: 'Big Shoulders Display', sans-serif;
+			line-height: 0.95;
+			text-transform: uppercase;
+		}
+		.hero-lockup .word-1 {
+			display: block;
+			font-weight: 700;
+			font-size: clamp(28px, 3.6vw, 50px);
+			letter-spacing: 0.04em;
+			background: linear-gradient(90deg, var(--neon-cyan), var(--neon-magenta));
+			-webkit-background-clip: text;
+			background-clip: text;
+			color: transparent;
+			text-shadow: var(--glow-cyan);
+		}
+		.hero-lockup .word-2 {
+			display: block;
+			font-weight: 900;
+			font-size: clamp(36px, 4.6vw, 64px);
+			letter-spacing: 0.06em;
+			background: linear-gradient(90deg, var(--neon-orange), var(--neon-yellow));
+			-webkit-background-clip: text;
+			background-clip: text;
+			color: transparent;
+		}
+
+		h1 {
+			font-family: 'Big Shoulders Display', sans-serif;
+			font-weight: 900;
+			font-size: clamp(40px, 6.5vw, 88px);
+			line-height: 1.02;
+			letter-spacing: 0.005em;
+			text-transform: uppercase;
+			margin: 0;
+			color: var(--ink);
+			text-shadow: 0 0 18px rgba(108, 243, 251, 0.18);
+		}
+		h1 .accent {
+			background: linear-gradient(90deg, var(--neon-cyan), var(--neon-magenta) 60%, var(--neon-yellow));
+			-webkit-background-clip: text;
+			background-clip: text;
+			color: transparent;
+		}
+
+		.lede {
+			font-family: 'IBM Plex Sans', sans-serif;
+			font-weight: 400;
+			font-size: clamp(17px, 1.7vw, 21px);
+			line-height: 1.5;
+			max-width: 720px;
+			margin: 28px 0 0;
+			color: var(--ink-soft);
+		}
+		.lede code {
+			font-family: 'JetBrains Mono', monospace;
+			font-size: 0.9em;
+			background: var(--surface);
+			border: var(--rule-w) solid var(--rule-soft);
+			padding: 2px 8px;
+			border-radius: 4px;
+			color: var(--neon-cyan);
+		}
+
+		/* ---------- INSTALL BLOCK ---------- */
+		.install {
+			margin-top: 52px;
+			display: grid;
+			grid-template-columns: minmax(0, 1fr) auto;
+			align-items: stretch;
+			border: var(--rule-w) solid var(--neon-cyan);
+			background: var(--surface);
+			color: var(--ink);
+			box-shadow:
+				0 0 0 1px rgba(108, 243, 251, 0.15),
+				0 0 32px rgba(108, 243, 251, 0.18),
+				0 12px 40px rgba(0, 0, 0, 0.5);
+			max-width: 920px;
+			border-radius: 4px;
+			overflow: hidden;
+		}
+		.install-cmd {
+			padding: 22px 28px;
+			font-family: 'JetBrains Mono', monospace;
+			font-size: clamp(14px, 1.5vw, 18px);
+			line-height: 1.4;
+			overflow-x: auto;
+			white-space: nowrap;
+		}
+		.install-cmd .prompt { color: var(--neon-cyan); user-select: none; margin-right: 12px; }
+		.install-cmd .pkg { color: var(--neon-yellow); }
+		.install-cmd .arg { color: var(--ink); }
+		.install-cmd .flag { color: var(--neon-magenta); }
+
+		.copy-btn {
+			border: 0;
+			border-left: var(--rule-w) solid var(--rule);
+			background: transparent;
+			color: var(--ink-mute-strong);
+			font-family: 'Big Shoulders Display', sans-serif;
+			font-weight: 700;
+			font-size: 11px;
+			letter-spacing: 0.22em;
+			text-transform: uppercase;
+			padding: 0 28px;
+			cursor: pointer;
+			transition: background 0.15s, color 0.15s, text-shadow 0.15s;
+			min-width: 100px;
+		}
+		.copy-btn:hover {
+			color: var(--neon-cyan);
+			text-shadow: var(--glow-cyan);
+			background: rgba(108, 243, 251, 0.06);
+		}
+		.copy-btn[data-copied="true"] {
+			color: var(--neon-magenta);
+			text-shadow: var(--glow-magenta);
+			background: rgba(255, 110, 211, 0.08);
+		}
+
+		.install-meta {
+			margin-top: 22px;
+			display: flex;
+			gap: 24px;
+			flex-wrap: wrap;
+			font-family: 'JetBrains Mono', monospace;
+			font-size: 12px;
+			letter-spacing: 0.06em;
+			color: var(--ink-mute-strong);
+		}
+		.install-meta .badge {
+			display: inline-flex;
+			align-items: center;
+			gap: 8px;
+		}
+		.install-meta .badge::before {
+			content: '';
+			width: 7px;
+			height: 7px;
+			background: var(--neon-cyan);
+			border-radius: 50%;
+			box-shadow: 0 0 8px rgba(108, 243, 251, 0.5);
+		}
+
+		/* ---------- HERO GRID (right column with version) ---------- */
+		.hero-grid {
+			display: grid;
+			grid-template-columns: minmax(0, 1fr) auto;
+			gap: clamp(28px, 4vw, 80px);
+			align-items: start;
+		}
+		.version {
+			border: var(--rule-w) solid var(--rule);
+			padding: 20px 22px;
+			background: var(--surface);
+			font-family: 'JetBrains Mono', monospace;
+			min-width: 220px;
+			border-radius: 4px;
+			box-shadow: 0 0 0 1px rgba(255, 110, 211, 0.2), 0 12px 40px rgba(0, 0, 0, 0.5);
+		}
+		.version .label {
+			font-size: 10px;
+			letter-spacing: 0.22em;
+			text-transform: uppercase;
+			color: var(--ink-mute-strong);
+			margin-bottom: 8px;
+		}
+		.version .num {
+			font-family: 'Big Shoulders Display', sans-serif;
+			font-weight: 900;
+			font-size: 48px;
+			line-height: 1;
+			letter-spacing: 0.02em;
+			color: var(--neon-yellow);
+			text-shadow: var(--glow-yellow);
+		}
+		.version .meta {
+			margin-top: 16px;
+			font-size: 11px;
+			letter-spacing: 0.05em;
+			color: var(--ink-soft);
+			line-height: 1.55;
+		}
+
+		/* ---------- SECTION HEADERS ---------- */
+		.sect {
+			padding: clamp(72px, 9vw, 120px) 0;
+			border-top: var(--rule-w) solid var(--rule-soft);
+			position: relative;
+		}
+		.sect-head {
+			display: grid;
+			grid-template-columns: auto minmax(0, 1fr);
+			gap: 28px;
+			align-items: end;
+			margin-bottom: clamp(40px, 5vw, 64px);
+		}
+		.sect-num {
+			font-family: 'JetBrains Mono', monospace;
+			font-size: 12px;
+			letter-spacing: 0.22em;
+			text-transform: uppercase;
+			color: var(--ink-mute-strong);
+			border-bottom: var(--rule-w) solid var(--neon-cyan);
+			padding-bottom: 8px;
+		}
+		.sect-title {
+			font-family: 'Big Shoulders Display', sans-serif;
+			font-weight: 900;
+			font-size: clamp(32px, 4.4vw, 56px);
+			line-height: 1.05;
+			letter-spacing: 0.005em;
+			text-transform: uppercase;
+			margin: 0;
+			color: var(--ink);
+		}
+		.sect-title .accent {
+			background: linear-gradient(90deg, var(--neon-cyan), var(--neon-magenta));
+			-webkit-background-clip: text;
+			background-clip: text;
+			color: transparent;
+		}
+
+		/* ---------- FEATURE CARDS ---------- */
+		.features {
+			display: grid;
+			grid-template-columns: repeat(3, minmax(0, 1fr));
+			gap: 18px;
+		}
+		.feature {
+			padding: 32px 28px 36px;
+			background: var(--surface);
+			border: var(--rule-w) solid var(--rule);
+			border-radius: 4px;
+			min-height: 320px;
+			display: flex;
+			flex-direction: column;
+			position: relative;
+			transition: border-color 0.18s, box-shadow 0.18s, transform 0.18s;
+		}
+		.feature:hover {
+			transform: translateY(-2px);
+		}
+		.feature:nth-child(1) { border-color: rgba(255, 110, 211, 0.4); }
+		.feature:nth-child(1):hover { border-color: var(--neon-magenta); box-shadow: 0 0 0 1px rgba(255, 110, 211, 0.15), 0 0 30px rgba(222, 27, 176, 0.20); }
+		.feature:nth-child(2) { border-color: rgba(108, 243, 251, 0.4); }
+		.feature:nth-child(2):hover { border-color: var(--neon-cyan); box-shadow: 0 0 0 1px rgba(108, 243, 251, 0.15), 0 0 30px rgba(44, 213, 222, 0.20); }
+		.feature:nth-child(3) { border-color: rgba(255, 155, 110, 0.4); }
+		.feature:nth-child(3):hover { border-color: var(--neon-orange); box-shadow: 0 0 0 1px rgba(255, 155, 110, 0.15), 0 0 30px rgba(255, 122, 69, 0.20); }
+
+		.feature-num {
+			font-family: 'Big Shoulders Display', sans-serif;
+			font-weight: 900;
+			font-size: 64px;
+			line-height: 0.9;
+			letter-spacing: 0.02em;
+			margin-bottom: 24px;
+		}
+		.feature:nth-child(1) .feature-num {
+			color: var(--neon-magenta);
+			text-shadow: var(--glow-magenta);
+		}
+		.feature:nth-child(2) .feature-num {
+			color: var(--neon-cyan);
+			text-shadow: var(--glow-cyan);
+		}
+		.feature:nth-child(3) .feature-num {
+			color: var(--neon-orange);
+			text-shadow: 0 0 12px rgba(255, 155, 110, 0.45);
+		}
+
+		.feature-title {
+			font-family: 'Big Shoulders Display', sans-serif;
+			font-weight: 700;
+			font-size: 24px;
+			line-height: 1.15;
+			letter-spacing: 0.01em;
+			text-transform: uppercase;
+			margin: 0 0 14px;
+			color: var(--ink);
+		}
+		.feature-body {
+			font-size: 15px;
+			line-height: 1.6;
+			color: var(--ink-soft);
+			margin: 0;
+		}
+		.feature-body code {
+			font-family: 'JetBrains Mono', monospace;
+			font-size: 13px;
+			background: var(--bg-2);
+			padding: 1px 6px;
+			border-radius: 3px;
+			color: var(--neon-cyan);
+		}
+
+		/* ---------- WHAT-YOU-GET ---------- */
+		.struct {
+			display: grid;
+			grid-template-columns: 1.05fr 1fr;
+			gap: 18px;
+		}
+		.struct > div {
+			padding: 28px 30px;
+			background: var(--surface);
+			border: var(--rule-w) solid var(--rule);
+			border-radius: 4px;
+		}
+		.struct-label {
+			font-family: 'JetBrains Mono', monospace;
+			font-size: 11px;
+			letter-spacing: 0.22em;
+			text-transform: uppercase;
+			color: var(--ink-mute-strong);
+			margin-bottom: 18px;
+		}
+		.struct pre {
+			margin: 0;
+			font-family: 'JetBrains Mono', monospace;
+			font-size: 13px;
+			line-height: 1.65;
+			white-space: pre;
+			overflow-x: auto;
+			color: var(--ink-soft);
+		}
+		.struct .dim { color: var(--ink-mute-strong); }
+		.struct .tag-cy { color: var(--neon-cyan); }
+		.struct .tag-yl { color: var(--neon-yellow); }
+		.struct .tag-mg { color: var(--neon-magenta); }
+		.struct .tag-or { color: var(--neon-orange); }
+
+		/* ---------- LINKS ---------- */
+		.links {
+			display: grid;
+			grid-template-columns: repeat(3, minmax(0, 1fr));
+			gap: 18px;
+		}
+		.link-card {
+			padding: 30px 30px 28px;
+			background: var(--surface);
+			border: var(--rule-w) solid var(--rule);
+			border-radius: 4px;
+			text-decoration: none;
+			color: var(--ink);
+			display: flex;
+			flex-direction: column;
+			justify-content: space-between;
+			min-height: 200px;
+			transition: border-color 0.18s, box-shadow 0.18s, transform 0.18s;
+		}
+		.link-card:hover {
+			transform: translateY(-2px);
+			border-color: var(--neon-cyan);
+			box-shadow: 0 0 0 1px rgba(108, 243, 251, 0.15), 0 0 30px rgba(44, 213, 222, 0.18);
+		}
+		.link-card .which {
+			font-family: 'JetBrains Mono', monospace;
+			font-size: 11px;
+			letter-spacing: 0.22em;
+			text-transform: uppercase;
+			color: var(--ink-mute-strong);
+		}
+		.link-card .name {
+			font-family: 'Big Shoulders Display', sans-serif;
+			font-weight: 900;
+			font-size: 38px;
+			line-height: 1;
+			letter-spacing: 0.02em;
+			text-transform: uppercase;
+			margin-top: 22px;
+			color: var(--ink);
+		}
+		.link-card .arrow {
+			font-family: 'JetBrains Mono', monospace;
+			font-size: 13px;
+			letter-spacing: 0.08em;
+			margin-top: 22px;
+			align-self: flex-start;
+			color: var(--neon-cyan);
+			transition: transform 0.18s, text-shadow 0.18s;
+		}
+		.link-card:hover .arrow { transform: translateX(8px); text-shadow: var(--glow-cyan); }
+
+		/* ---------- FOOTER ---------- */
+		footer {
+			border-top: var(--rule-w) solid var(--rule-soft);
+			padding: 28px 0 60px;
+			margin-top: clamp(60px, 8vw, 100px);
+			font-family: 'JetBrains Mono', monospace;
+			font-size: 11px;
+			letter-spacing: 0.12em;
+			text-transform: uppercase;
+			color: var(--ink-mute-strong);
+			display: flex;
+			justify-content: space-between;
+			gap: 20px;
+			flex-wrap: wrap;
+		}
+		footer a { color: var(--neon-cyan); }
+		footer .star { color: var(--neon-magenta); margin: 0 6px; text-shadow: var(--glow-magenta); }
+
+		/* ---------- RESPONSIVE ---------- */
+		@media (max-width: 860px) {
+			.hero-grid { grid-template-columns: minmax(0, 1fr); }
+			.version { justify-self: start; }
+			.features { grid-template-columns: 1fr; }
+			.feature { min-height: 0; }
+			.struct { grid-template-columns: 1fr; }
+			.links { grid-template-columns: 1fr; }
+			.link-card { min-height: 0; }
+		}
+
+		@media (max-width: 520px) {
+			.install { grid-template-columns: 1fr; }
+			.copy-btn { border-left: 0; border-top: var(--rule-w) solid var(--rule); padding: 14px 28px; }
+			.strip-nav { gap: 14px; }
+			.hero-lockup { gap: 20px; }
+		}
+	</style>
+</head>
+<body>
+
+<header class="strip">
+	<div class="strip-inner">
+		<div class="strip-brand">
+			<a href="https://procyoncreative.com" aria-label="Procyon Creative homepage">
+				<svg class="logo" viewBox="0 0 249.72 118.64" role="img" aria-label="Procyon Creative">
+					<title>Procyon Creative</title>
+					<defs>
+						<linearGradient id="brandGradient" x1="1.38" y1="103.86" x2="248.38" y2="42.47" gradientUnits="userSpaceOnUse">
+							<stop offset="0" stop-color="#2cd5de"/>
+							<stop offset=".49" stop-color="#de1bb0"/>
+							<stop offset="1" stop-color="#e8dc31"/>
+						</linearGradient>
+					</defs>
+					<path d="M232.77 14.2c-17.88-17.2-43.16-17.81-64.51-7-16.91 8.56-28.05 23.99-38.52 39.25 1.08-6.13-.38-12.67-4.32-17.77-7.11-9.2-18.76-10.77-28.94-5.77C64.44 38.65 34.69 57.95 6.57 79.9 2.37 83.18 0 90.71 0 95.76c0 5.51 2.45 12.08 6.57 15.87 4.28 3.92 9.89 6.83 15.87 6.57 6.05-.28 10.48-2.5 15.18-6.06.31-.23.62-.47.93-.7 1.73-1.31 3.47-2.61 5.22-3.89 3.06-2.25 6.14-4.47 9.26-6.64 5.3-3.71 10.67-7.31 16.11-10.8.69 3.96 1.98 8.3 3.88 13.17 3.91 10.03 10.87 15.59 21.63 16.47 19.11 1.57 37.52-8.54 50.75-21.59 6.51-6.43 11.94-14.02 17.13-21.53 2.21-3.19 4.36-6.41 6.56-9.6 1.03-1.49 2.06-2.97 3.12-4.43.47-.64.95-1.28 1.42-1.93l.22-.25c2.46-2.8 4.85-5.61 7.62-8.12.26-.24.53-.47.79-.7 1.68-.74 3.53-2.48 5.08-3.35.53-.31 1.1-.57 1.65-.85 1.34-.43 2.68-1.04 4.03-1.38.28-.07.6-.12.94-.17.44-.02.87-.04 1.31-.05.75.27 1.94.46 2.85.62.3.16.6.33.88.5.47.5 1.01 1.01 1.51 1.51.53.8 1.04 1.6 1.49 2.44.07.13.14.29.22.47.27 1.02.53 2.05.8 3.07.03.51.05 1.01.05 1.51 0 .28-.04.6-.07.92-.14.58-.27 1.15-.44 1.72-.07.24-.23.68-.39 1.13-.5.93-1.04 1.84-1.6 2.72-.11.17-.24.35-.36.52l-.42.42c-.97.99-1.97 1.94-2.99 2.87-.69.44-1.36.91-2.07 1.33-.5.29-1.02.55-1.52.83-1.7.48-3.39 1.2-5.11 1.61-11.43 2.68-19.3 16.37-15.66 27.59 3.86 11.93 15.34 18.55 27.59 15.67 21.1-4.95 37.99-20.74 45.2-40.97 6.89-19.31.43-42.81-14.19-56.86Z" fill="url(#brandGradient)"/>
+				</svg>
+			</a>
+			<span class="sep" aria-hidden="true">·</span>
+			<span class="pkg">dario-ai-connector</span>
+		</div>
+		<nav class="strip-nav" aria-label="Primary">
+			<a href="#what">What</a>
+			<a href="#usage">Usage</a>
+			<a href="#links">Links</a>
+		</nav>
+	</div>
+</header>
+
+<main>
+
+	<!-- HERO -->
+	<section class="hero">
+		<div class="hero-inner">
+			<div class="eyebrow"><span class="pulse" aria-hidden="true"></span>WordPress · AI Connector · Dario LLM Router</div>
+
+			<div class="hero-lockup" aria-hidden="true">
+				<svg class="mark" viewBox="0 0 249.72 118.64">
+					<defs>
+						<linearGradient id="heroMarkGradient" x1="1.38" y1="103.86" x2="248.38" y2="42.47" gradientUnits="userSpaceOnUse">
+							<stop offset="0" stop-color="#6cf3fb"/>
+							<stop offset=".49" stop-color="#ff6ed3"/>
+							<stop offset="1" stop-color="#f6e858"/>
+						</linearGradient>
+					</defs>
+					<path d="M232.77 14.2c-17.88-17.2-43.16-17.81-64.51-7-16.91 8.56-28.05 23.99-38.52 39.25 1.08-6.13-.38-12.67-4.32-17.77-7.11-9.2-18.76-10.77-28.94-5.77C64.44 38.65 34.69 57.95 6.57 79.9 2.37 83.18 0 90.71 0 95.76c0 5.51 2.45 12.08 6.57 15.87 4.28 3.92 9.89 6.83 15.87 6.57 6.05-.28 10.48-2.5 15.18-6.06.31-.23.62-.47.93-.7 1.73-1.31 3.47-2.61 5.22-3.89 3.06-2.25 6.14-4.47 9.26-6.64 5.3-3.71 10.67-7.31 16.11-10.8.69 3.96 1.98 8.3 3.88 13.17 3.91 10.03 10.87 15.59 21.63 16.47 19.11 1.57 37.52-8.54 50.75-21.59 6.51-6.43 11.94-14.02 17.13-21.53 2.21-3.19 4.36-6.41 6.56-9.6 1.03-1.49 2.06-2.97 3.12-4.43.47-.64.95-1.28 1.42-1.93l.22-.25c2.46-2.8 4.85-5.61 7.62-8.12.26-.24.53-.47.79-.7 1.68-.74 3.53-2.48 5.08-3.35.53-.31 1.1-.57 1.65-.85 1.34-.43 2.68-1.04 4.03-1.38.28-.07.6-.12.94-.17.44-.02.87-.04 1.31-.05.75.27 1.94.46 2.85.62.3.16.6.33.88.5.47.5 1.01 1.01 1.51 1.51.53.8 1.04 1.6 1.49 2.44.07.13.14.29.22.47.27 1.02.53 2.05.8 3.07.03.51.05 1.01.05 1.51 0 .28-.04.6-.07.92-.14.58-.27 1.15-.44 1.72-.07.24-.23.68-.39 1.13-.5.93-1.04 1.84-1.6 2.72-.11.17-.24.35-.36.52l-.42.42c-.97.99-1.97 1.94-2.99 2.87-.69.44-1.36.91-2.07 1.33-.5.29-1.02.55-1.52.83-1.7.48-3.39 1.2-5.11 1.61-11.43 2.68-19.3 16.37-15.66 27.59 3.86 11.93 15.34 18.55 27.59 15.67 21.1-4.95 37.99-20.74 45.2-40.97 6.89-19.31.43-42.81-14.19-56.86Z" fill="url(#heroMarkGradient)"/>
+				</svg>
+				<div class="word">
+					<span class="word-1">procyon</span>
+					<span class="word-2">CREATIVE</span>
+				</div>
+			</div>
+
+			<div class="hero-grid">
+				<div>
+					<h1>Connect WordPress<br>to AI models,<br><span class="accent">via Dario.</span></h1>
+					<p class="lede">Registers <a href="https://github.com/askalf/dario">Dario</a> as a WordPress 7.0 AI provider via the Connectors API. Routes Claude, GPT, and any OpenAI-compatible backend through one local endpoint.</p>
+
+					<div class="install" role="region" aria-label="Install command">
+						<div class="install-cmd" tabindex="0" aria-label="wp-cli install command (scrollable)">
+							<span class="prompt">$</span><span class="pkg">wp&nbsp;plugin&nbsp;install</span> <span class="arg">https://github.com/procyon-creative/wp-dario-provider/releases/latest/download/procyon-dario-provider.zip</span> <span class="flag">--activate</span>
+						</div>
+						<button class="copy-btn" id="copy" type="button" data-copied="false" aria-label="Copy install command">Copy</button>
+					</div>
+
+					<div class="install-meta">
+						<span class="badge">GPL-2.0-or-later</span>
+						<span class="badge">WordPress ≥ 7.0</span>
+						<span class="badge">PHP ≥ 8.0</span>
+					</div>
+				</div>
+
+				<aside class="version" aria-label="Latest release">
+					<div class="label">Latest release</div>
+					<div class="num">v0.2.3</div>
+					<div class="meta">
+						Auto-updates via <a href="https://github.com/YahnisElsts/plugin-update-checker">plugin-update-checker</a>.<br>
+						<a href="https://github.com/procyon-creative/wp-dario-provider/releases">Releases →</a>
+					</div>
+				</aside>
+			</div>
+		</div>
+	</section>
+
+	<!-- WHAT IT DOES -->
+	<section class="sect" id="what">
+		<div class="sect-head">
+			<div class="sect-num">01 / What you get</div>
+			<h2 class="sect-title">One endpoint, <span class="accent">many backends</span>.</h2>
+		</div>
+
+		<div class="features">
+			<div class="feature">
+				<div class="feature-num">01</div>
+				<h3 class="feature-title">AI Provider in wp-admin</h3>
+				<p class="feature-body">Appears in <code>Settings → Connectors</code> alongside OpenAI and Anthropic. Any plugin using the WP 7.0 AI Client can target Dario via <code>using_model_preference()</code>.</p>
+			</div>
+			<div class="feature">
+				<div class="feature-num">02</div>
+				<h3 class="feature-title">Curated model directory</h3>
+				<p class="feature-body">Claude Sonnet 4.6, Claude Opus 4.7, GPT-4o, o3-mini, GPT-4.1, and the 4.1 Mini / Nano siblings. Any model Dario routes is also reachable by name.</p>
+			</div>
+			<div class="feature">
+				<div class="feature-num">03</div>
+				<h3 class="feature-title">Bundled Dario sidecar</h3>
+				<p class="feature-body">Optional Node sidecar boots Dario on activation, manages the proxy port, and drives the Claude OAuth flow from a settings page. Disable with <code>DARIO_MANAGE_SIDECAR</code>.</p>
+			</div>
+		</div>
+	</section>
+
+	<!-- USAGE -->
+	<section class="sect" id="usage">
+		<div class="sect-head">
+			<div class="sect-num">02 / Usage</div>
+			<h2 class="sect-title">Wire WordPress to <span class="accent">your model of choice</span>.</h2>
+		</div>
+
+		<div class="struct">
+			<div>
+				<div class="struct-label">Settings → Dario AI Connector</div>
+<pre><span class="dim">┌─</span> <span class="tag-yl">Status</span>
+<span class="dim">│</span>   Node available  yes
+<span class="dim">│</span>   Sidecar         <span class="tag-cy">running on :3456</span>
+<span class="dim">│</span>   Claude auth     <span class="tag-mg">authenticated</span>
+<span class="dim">├─</span> <span class="tag-yl">Claude OAuth</span>
+<span class="dim">│</span>   Start login  →  paste credentials.json
+<span class="dim">├─</span> <span class="tag-yl">Sidecar settings</span>
+<span class="dim">│</span>   Manage sidecar    <span class="tag-cy">[on]</span>
+<span class="dim">│</span>   Proxy host/port   <span class="tag-cy">127.0.0.1:3456</span>
+<span class="dim">│</span>   Node binary       <span class="tag-cy">node</span>
+<span class="dim">└─</span> <span class="tag-yl">OpenAI-compatible backend</span>
+    Name, base URL, API key, default model
+</pre>
+			</div>
+			<div>
+				<div class="struct-label">From any AI Client consumer</div>
+<pre><span class="dim">// any plugin can route through Dario</span>
+<span class="tag-cy">$text</span> = <span class="tag-yl">wp_ai_client_prompt</span>(
+    <span class="tag-mg">'Write a haiku about WordPress.'</span>
+)
+    -&gt;<span class="tag-yl">using_model_preference</span>(
+        <span class="tag-mg">'claude-sonnet-4-6'</span>
+    )
+    -&gt;<span class="tag-yl">generate_text</span>();
+
+<span class="dim">// override base URL via constant</span>
+<span class="tag-cy">define</span>(
+    <span class="tag-mg">'DARIO_BASE_URL'</span>,
+    <span class="tag-mg">'http://10.0.0.5:3456/v1'</span>
+);
+</pre>
+			</div>
+		</div>
+	</section>
+
+	<!-- LINKS -->
+	<section class="sect" id="links">
+		<div class="sect-head">
+			<div class="sect-num">03 / Where to go next</div>
+			<h2 class="sect-title">Pick a <span class="accent">direction</span>.</h2>
+		</div>
+
+		<div class="links">
+			<a class="link-card" href="https://github.com/procyon-creative/wp-dario-provider/releases">
+				<div class="which">01 — Install</div>
+				<div class="name">Releases</div>
+				<div class="arrow">latest zip →</div>
+			</a>
+			<a class="link-card" href="https://github.com/procyon-creative/wp-dario-provider">
+				<div class="which">02 — Source</div>
+				<div class="name">Repository</div>
+				<div class="arrow">github.com →</div>
+			</a>
+			<a class="link-card" href="https://github.com/askalf/dario">
+				<div class="which">03 — Upstream</div>
+				<div class="name">Dario</div>
+				<div class="arrow">askalf/dario →</div>
+			</a>
+		</div>
+	</section>
+
+	<footer>
+		<div>© Procyon Creative <span class="star" aria-hidden="true">✦</span> Released under GPL-2.0-or-later</div>
+		<div><a href="https://github.com/procyon-creative/wp-dario-provider/issues">Report an issue →</a></div>
+	</footer>
+
+</main>
+
+<script>
+	(function () {
+		var btn = document.getElementById('copy');
+		if (!btn) return;
+		var cmd = 'wp plugin install https://github.com/procyon-creative/wp-dario-provider/releases/latest/download/procyon-dario-provider.zip --activate';
+		btn.addEventListener('click', function () {
+			var done = function () {
+				btn.dataset.copied = 'true';
+				btn.textContent = 'Copied';
+				setTimeout(function () {
+					btn.dataset.copied = 'false';
+					btn.textContent = 'Copy';
+				}, 1600);
+			};
+			if (navigator.clipboard && navigator.clipboard.writeText) {
+				navigator.clipboard.writeText(cmd).then(done, function () { fallback(); });
+			} else { fallback(); }
+			function fallback() {
+				var ta = document.createElement('textarea');
+				ta.value = cmd;
+				ta.style.position = 'fixed';
+				ta.style.opacity = '0';
+				document.body.appendChild(ta);
+				ta.select();
+				try { document.execCommand('copy'); done(); } catch (_) {}
+				document.body.removeChild(ta);
+			}
+		});
+	}());
+</script>
+
+</body>
+</html>
