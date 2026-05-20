@@ -1,0 +1,22 @@
+{
+  "name": "wp-dario-provider-docs-site",
+  "private": true,
+  "type": "module",
+  "version": "0.0.0",
+  "description": "GitHub Pages landing page for procyon-creative/wp-dario-provider. Built with Astro 5 + @procyon-creative/astro-theme.",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "astro": "astro"
+  },
+  "dependencies": {
+    "@procyon-creative/astro-theme": "^0.1.0",
+    "@tailwindcss/vite": "^4.0.0",
+    "astro": "^5.18.0",
+    "tailwindcss": "^4.0.0"
+  }
+}

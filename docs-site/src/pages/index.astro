@@ -1,0 +1,175 @@
+---
+import "../styles/global.css";
+import LandingLayout from "@procyon-creative/astro-theme/layouts/LandingLayout.astro";
+import Hero from "@procyon-creative/astro-theme/components/Hero.astro";
+import InstallBlock from "@procyon-creative/astro-theme/components/InstallBlock.astro";
+import VersionAside from "@procyon-creative/astro-theme/components/VersionAside.astro";
+import Section from "@procyon-creative/astro-theme/components/Section.astro";
+import FeatureCards from "@procyon-creative/astro-theme/components/FeatureCards.astro";
+import FeatureCard from "@procyon-creative/astro-theme/components/FeatureCard.astro";
+import StructPanel from "@procyon-creative/astro-theme/components/StructPanel.astro";
+import LinkCards from "@procyon-creative/astro-theme/components/LinkCards.astro";
+import LinkCard from "@procyon-creative/astro-theme/components/LinkCard.astro";
+import Footer from "@procyon-creative/astro-theme/components/Footer.astro";
+
+const installParts = [
+  { type: "prompt" as const, text: "$" },
+  { type: "pkg" as const, text: "wp plugin install" },
+  { type: "arg" as const, text: " https://github.com/procyon-creative/wp-dario-provider/releases/latest/download/procyon-dario-provider.zip" },
+  { type: "flag" as const, text: " --activate" },
+];
+const installCmd =
+  "wp plugin install https://github.com/procyon-creative/wp-dario-provider/releases/latest/download/procyon-dario-provider.zip --activate";
+---
+
+<LandingLayout
+  title="Dario AI Connector — WordPress AI provider for the Dario LLM router"
+  description="Connects WordPress to AI models via the Dario local LLM router, using the WordPress 7.0 Connectors API. One endpoint for Claude, GPT, and any OpenAI-compatible backend."
+  ogUrl="https://procyon-creative.github.io/wp-dario-provider/"
+  favicon={`${import.meta.env.BASE_URL}/procyon-icon.svg`}
+  pkg="dario-ai-connector"
+  nav={[
+    { label: "What", href: "#what" },
+    { label: "Usage", href: "#usage" },
+    { label: "Links", href: "#links" },
+  ]}
+>
+  <Hero eyebrow="WordPress · AI Connector · Dario LLM Router">
+    <h1
+      slot="headline"
+      class="font-display font-black uppercase text-[clamp(40px,6.5vw,88px)] leading-[1.02] m-0 text-ink"
+      style="letter-spacing: 0.005em; text-shadow: 0 0 18px rgba(108, 243, 251, 0.18);"
+    >
+      Connect WordPress<br />to AI models,<br />
+      <span class="bg-gradient-to-r from-neon-cyan via-neon-magenta to-neon-yellow bg-clip-text text-transparent">
+        via Dario.
+      </span>
+    </h1>
+
+    <p
+      slot="lede"
+      class="font-sans text-[clamp(17px,1.7vw,21px)] leading-[1.5] max-w-[720px] mt-7 text-ink-soft"
+    >
+      Registers <a href="https://github.com/askalf/dario" class="text-neon-cyan underline underline-offset-4">Dario</a> as a WordPress 7.0 AI provider via the Connectors API. Routes Claude, GPT, and any OpenAI-compatible backend through one local endpoint.
+    </p>
+
+    <InstallBlock slot="install" command={installCmd} parts={installParts} />
+
+    <Fragment slot="meta">
+      <span class="badge">GPL-2.0-or-later</span>
+      <span class="badge">WordPress ≥ 7.0</span>
+      <span class="badge">PHP ≥ 8.0</span>
+    </Fragment>
+
+    <VersionAside slot="aside" version="v0.2.3">
+      Auto-updates via <a href="https://github.com/YahnisElsts/plugin-update-checker" class="text-neon-cyan underline underline-offset-2">plugin-update-checker</a>.<br />
+      <a href="https://github.com/procyon-creative/wp-dario-provider/releases" class="text-neon-cyan underline underline-offset-2">Releases →</a>
+    </VersionAside>
+  </Hero>
+
+  <Section id="what" num="01 / What you get">
+    <Fragment slot="title">
+      One endpoint, <span class="bg-gradient-to-r from-neon-cyan to-neon-magenta bg-clip-text text-transparent">many backends</span>.
+    </Fragment>
+
+    <FeatureCards>
+      <FeatureCard num="01" title="AI Provider in wp-admin">
+        Appears in <code>Settings → Connectors</code> alongside OpenAI and Anthropic. Any plugin using the WP 7.0 AI Client can target Dario via <code>using_model_preference()</code>.
+      </FeatureCard>
+      <FeatureCard num="02" title="Curated model directory">
+        Claude Sonnet 4.6, Claude Opus 4.7, GPT-4o, o3-mini, GPT-4.1, and the 4.1 Mini / Nano siblings. Any model Dario routes is also reachable by name.
+      </FeatureCard>
+      <FeatureCard num="03" title="Bundled Dario sidecar">
+        Optional Node sidecar boots Dario on activation, manages the proxy port, and drives the Claude OAuth flow from a settings page. Disable with <code>DARIO_MANAGE_SIDECAR</code>.
+      </FeatureCard>
+    </FeatureCards>
+  </Section>
+
+  <Section id="usage" num="02 / Usage">
+    <Fragment slot="title">
+      Wire WordPress to <span class="bg-gradient-to-r from-neon-cyan to-neon-magenta bg-clip-text text-transparent">your model of choice</span>.
+    </Fragment>
+
+    <StructPanel>
+      <Fragment slot="left-label">Settings → Dario AI Connector</Fragment>
+      <pre slot="left"><span class="dim">┌─</span> <span class="tag-yl">Status</span>
+<span class="dim">│</span>   Node available  yes
+<span class="dim">│</span>   Sidecar         <span class="tag-cy">running on :3456</span>
+<span class="dim">│</span>   Claude auth     <span class="tag-mg">authenticated</span>
+<span class="dim">├─</span> <span class="tag-yl">Claude OAuth</span>
+<span class="dim">│</span>   Start login  →  paste credentials.json
+<span class="dim">├─</span> <span class="tag-yl">Sidecar settings</span>
+<span class="dim">│</span>   Manage sidecar    <span class="tag-cy">[on]</span>
+<span class="dim">│</span>   Proxy host/port   <span class="tag-cy">127.0.0.1:3456</span>
+<span class="dim">│</span>   Node binary       <span class="tag-cy">node</span>
+<span class="dim">└─</span> <span class="tag-yl">OpenAI-compatible backend</span>
+    Name, base URL, API key, default model
+</pre>
+
+      <Fragment slot="right-label">From any AI Client consumer</Fragment>
+      <pre slot="right"><span class="dim">// any plugin can route through Dario</span>
+<span class="tag-cy">$text</span> = <span class="tag-yl">wp_ai_client_prompt</span>(
+    <span class="tag-mg">'Write a haiku about WordPress.'</span>
+)
+    -&gt;<span class="tag-yl">using_model_preference</span>(
+        <span class="tag-mg">'claude-sonnet-4-6'</span>
+    )
+    -&gt;<span class="tag-yl">generate_text</span>();
+
+<span class="dim">// override base URL via constant</span>
+<span class="tag-cy">define</span>(
+    <span class="tag-mg">'DARIO_BASE_URL'</span>,
+    <span class="tag-mg">'http://10.0.0.5:3456/v1'</span>
+);
+</pre>
+    </StructPanel>
+  </Section>
+
+  <Section id="links" num="03 / Where to go next">
+    <Fragment slot="title">
+      Pick a <span class="bg-gradient-to-r from-neon-cyan to-neon-magenta bg-clip-text text-transparent">direction</span>.
+    </Fragment>
+
+    <LinkCards>
+      <LinkCard
+        href="https://github.com/procyon-creative/wp-dario-provider/releases"
+        which="01 — Install"
+        name="Releases"
+        arrow="latest zip →"
+      />
+      <LinkCard
+        href="https://github.com/procyon-creative/wp-dario-provider"
+        which="02 — Source"
+        name="Repository"
+        arrow="github.com →"
+      />
+      <LinkCard
+        href="https://github.com/askalf/dario"
+        which="03 — Upstream"
+        name="Dario"
+        arrow="askalf/dario →"
+      />
+    </LinkCards>
+  </Section>
+
+  <Footer
+    copyright="© Procyon Creative"
+    issuesUrl="https://github.com/procyon-creative/wp-dario-provider/issues"
+  />
+</LandingLayout>
+
+<style is:global>
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .badge::before {
+    content: "";
+    width: 7px;
+    height: 7px;
+    background: var(--color-neon-cyan);
+    border-radius: 50%;
+    box-shadow: 0 0 8px rgba(108, 243, 251, 0.5);
+  }
+</style>
