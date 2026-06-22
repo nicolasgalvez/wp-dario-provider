@@ -1,1 +1,172 @@
 @import "@procyon-creative/astro-theme/theme.css";
+
+/* ---------------------------------------------------------------------------
+ * Local palette override — "Petrol & Ember"
+ *
+ * Keeps the house theme's structure, typography, glow and film-grain vibe but
+ * shifts the palette away from the shared Procyon navy + cyan/magenta/yellow so
+ * this page reads as its own thing: a deep petrol/emerald base with amber-gold,
+ * coral and lime neon accents.
+ *
+ * Because the theme is built on Tailwind v4 `@theme` tokens, redefining the
+ * same `--color-*` names after the import recolours every token-driven element
+ * at once (text, links, gradient headlines, code-panel tags, card borders,
+ * rules, surfaces, glow stacks). The hardcoded rgba() glows baked into a few
+ * theme components are re-tinted further down.
+ *
+ * Accessibility: every foreground below is verified ≥ 4.5:1 (WCAG AA for normal
+ * text) against the background AND both card surfaces. Lowest ratio is the
+ * muted ink on surface-2 at 5.50:1.
+ * ------------------------------------------------------------------------- */
+
+@theme inline {
+  /* Surfaces — deep petrol/teal-black */
+  --color-bg: #08161a;
+  --color-bg-2: #0d2128;
+  --color-bg-3: #123038;
+  --color-surface: #0f252c;
+  --color-surface-2: #163640;
+
+  /* Ink — warm near-white on the cool base */
+  --color-ink: #fbf7ef;
+  --color-ink-soft: #d8e6e2;
+  --color-ink-mute: #8fb0ae;
+  --color-ink-mute-strong: #b4cfcb;
+
+  /* Lines */
+  --color-rule: #2f5a55;
+  --color-rule-soft: #1b3a37;
+
+  /* Brand riso (decorative / gradient stops) */
+  --color-brand-cyan: #18b89a;
+  --color-brand-magenta: #e0466b;
+  --color-brand-yellow: #d8c531;
+  --color-brand-orange: #ff8a3c;
+
+  /* Accessible neon foregrounds tuned for the new --color-bg.
+   * Token names are kept from the theme; the hues are re-pointed:
+   *   neon-cyan    → amber-gold (primary accent / links / gradient stop 1)
+   *   neon-magenta → coral      (gradient stop 2)
+   *   neon-yellow  → lime       (gradient stop 3)
+   *   neon-orange  → warm orange
+   * All ≥ 4.5:1 against #08161a. */
+  --color-neon-cyan: #ffc24a;
+  --color-neon-magenta: #ff8e7a;
+  --color-neon-yellow: #c7f24e;
+  --color-neon-orange: #ffab5e;
+
+  /* Glow stacks — re-tinted to match the new accents */
+  --shadow-glow-cyan:
+    0 0 12px rgba(255, 194, 74, 0.45), 0 0 24px rgba(230, 165, 35, 0.25);
+  --shadow-glow-magenta:
+    0 0 12px rgba(255, 142, 122, 0.45), 0 0 28px rgba(224, 70, 107, 0.22);
+  --shadow-glow-yellow:
+    0 0 12px rgba(199, 242, 78, 0.4), 0 0 24px rgba(180, 220, 40, 0.22);
+}
+
+/* Atmospheric vignette — the theme's body::before tints it cyan/magenta/orange
+ * via hardcoded rgba(). Re-tint to coral / amber / lime to match. */
+body::before {
+  background:
+    radial-gradient(
+      900px 600px at 110% -10%,
+      rgba(255, 142, 122, 0.16),
+      transparent 60%
+    ),
+    radial-gradient(
+      800px 600px at -10% 30%,
+      rgba(255, 194, 74, 0.12),
+      transparent 60%
+    ),
+    radial-gradient(
+      1200px 800px at 50% 100%,
+      rgba(199, 242, 78, 0.1),
+      transparent 60%
+    );
+}
+
+/* Film-grain overlay — re-tint the noise from lavender toward warm amber. */
+body::after {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.95' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1.0  0 0 0 0 0.78  0 0 0 0 0.35  0 0 0 0.55 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+}
+
+/* Tron grid floor under the hero — theme hardcodes it cyan. Re-tint to amber.
+ * Uses !important to win over the component's scoped style. */
+.hero-grid-floor {
+  background-image:
+    linear-gradient(
+      transparent 0%,
+      transparent 70%,
+      rgba(255, 194, 74, 0.18) 70%,
+      rgba(255, 194, 74, 0.18) 71%,
+      transparent 71%
+    ),
+    repeating-linear-gradient(
+      90deg,
+      rgba(255, 194, 74, 0.12) 0,
+      rgba(255, 194, 74, 0.12) 1px,
+      transparent 1px,
+      transparent 80px
+    ),
+    repeating-linear-gradient(
+      0deg,
+      rgba(255, 194, 74, 0.1) 0,
+      rgba(255, 194, 74, 0.1) 1px,
+      transparent 1px,
+      transparent 60px
+    ) !important;
+}
+
+/* Feature card resting borders + hover halos — theme.css hardcodes the old
+ * magenta/cyan/orange. These selectors are global (`is:global`); the `body`
+ * prefix lifts specificity so the re-tint wins. */
+body .features .feature:nth-child(1) {
+  border-color: rgba(255, 142, 122, 0.4);
+}
+body .features .feature:nth-child(1):hover {
+  border-color: var(--color-neon-magenta);
+  box-shadow:
+    0 0 0 1px rgba(255, 142, 122, 0.15),
+    0 0 30px rgba(224, 70, 107, 0.2);
+}
+body .features .feature:nth-child(2) {
+  border-color: rgba(255, 194, 74, 0.4);
+}
+body .features .feature:nth-child(2):hover {
+  border-color: var(--color-neon-cyan);
+  box-shadow:
+    0 0 0 1px rgba(255, 194, 74, 0.15),
+    0 0 30px rgba(230, 165, 35, 0.2);
+}
+body .features .feature:nth-child(3) {
+  border-color: rgba(255, 171, 94, 0.4);
+}
+body .features .feature:nth-child(3):hover {
+  border-color: var(--color-neon-orange);
+  box-shadow:
+    0 0 0 1px rgba(255, 171, 94, 0.15),
+    0 0 30px rgba(255, 138, 60, 0.2);
+}
+
+/* Link card hover halo — re-tint the hardcoded cyan glow to amber.
+ * (border-color already tracks --color-neon-cyan and recolours automatically.) */
+body .link-card:hover {
+  box-shadow:
+    0 0 0 1px rgba(255, 194, 74, 0.15),
+    0 0 30px rgba(230, 165, 35, 0.18);
+}
+
+/* Install command box halo — scoped style, override with !important → amber. */
+.install {
+  box-shadow:
+    0 0 0 1px rgba(255, 194, 74, 0.15),
+    0 0 32px rgba(255, 194, 74, 0.18),
+    0 12px 40px rgba(0, 0, 0, 0.5) !important;
+}
+
+/* Version aside halo — scoped magenta → coral. */
+.version {
+  box-shadow:
+    0 0 0 1px rgba(255, 142, 122, 0.2),
+    0 12px 40px rgba(0, 0, 0, 0.5) !important;
+}
